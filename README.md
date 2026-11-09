@@ -1,6 +1,6 @@
 # Objekterkennung mit OpenCV
 
-Das Programm erkennt mit einer Webcam Form, Farbe und Position von Holzobjekten auf einem 18 cm × 18 cm großen Spielfeld und meldet jede Veränderung. Ein Beispiel: Liegt ein roter Würfel genau in der Mitte des Feldes, zeigt es „rot Würfel (0.50 | 0.50)“; schiebt man ihn nach rechts oben, meldet es „VERSCHOBEN: rot Würfel → (0.80 | 0.70)“. Gebaut ist es mit Python und OpenCV, ohne Netzwerk und ohne KI-Modelle zur Erkennung.
+Das Programm erkennt mit einer Webcam Form, Farbe und Position von Holzobjekten auf einem 18 cm × 18 cm großen Spielfeld und meldet jede Veränderung. Ein Beispiel: Liegt ein roter Würfel genau in der Mitte des Feldes, zeigt es „rot Würfel (0.50 | 0.50)“; schiebt man ihn nach rechts oben, meldet es „VERSCHOBEN: rot Würfel (0.50 | 0.50) -> (0.80 | 0.70)“. Gebaut ist es mit Python und OpenCV, ohne Netzwerk und ohne KI-Modelle zur Erkennung.
 
 Entstanden im Modul PALG (Projekt Algorithmen) an der FHDW, Studiengruppe MFAX424A.
 
@@ -53,7 +53,7 @@ Die Tests brauchen keine Kamera; sie arbeiten mit Bildern, die sie selbst zeichn
 |---|---|
 | `main.py` | Startpunkt: liest die Einstellungen, öffnet die Kamera und führt die Schleife pro Bild aus. |
 | `config.json` | Kamera, Spielfeldmaße, Farbbereiche (HSV) und Schwellwerte. |
-| [`objekterkennung/`](objekterkennung) | Der Code, ein Modul pro Aufgabe: `config` (Einstellungen), `camera` (Kamera), `board` (Marker finden, Feld entzerren), `segmentation` (Farbmasken, Trennen berührender Objekte), `shapes` (Form), `colors` (Farbe), `tracker` (Veränderungen), `models` (Datenklassen), `display` (Anzeige), `calibration` (Kalibriermodus). |
+| [`objekterkennung/`](objekterkennung) | Der Code, ein Modul pro Aufgabe: `config` (Einstellungen), `camera` (Kamera), `board` (Marker finden, Feld entzerren), `segmentation` (Farbmasken, Trennen berührender Objekte), `shapes` (Form), `detector` (Farbe, Form und Position aller Objekte), `tracker` (Veränderungen), `models` (Datenklassen), `display` (Anzeige), `calibration` (Kalibriermodus). |
 | [`tests/`](tests) | Automatische Tests mit pytest. |
 | [`tools/`](tools) | `make_board.py` erzeugt das Spielfeld-PDF aus den Maßen in `config.json`. |
 | [`assets/`](assets) | Das druckfertige Spielfeld. |

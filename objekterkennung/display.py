@@ -1,11 +1,17 @@
-"""Builds the one window that shows the camera image and the straight field side by side (A6)."""
+"""Builds the one window: camera image and straight field with the detected objects side by side (A6)."""
 
 import cv2
 import numpy as np
 
+from objekterkennung.board import unit_to_pixel
+
 NO_FIELD_TEXT = "Spielfeld nicht gefunden"
 TEXT_COLOR = (0, 0, 255)
 MARKER_COLOR = (0, 255, 0)
+LABEL_COLOR = (0, 0, 0)
+DOT_COLOR = (255, 0, 255)
+# cv2.putText only knows ASCII letters, so umlauts are written out.
+ASCII_REPLACEMENTS = {"ä": "ae", "ö": "oe", "ü": "ue", "Ä": "Ae", "Ö": "Oe", "Ü": "Ue", "ß": "ss"}
 
 
 def draw_markers(image, markers):
@@ -35,3 +41,21 @@ def compose_window(camera_image, field_image):
     # np.hstack needs two images of the same height.
     camera_scaled = cv2.resize(camera_image, (width, height))
     return np.hstack([camera_scaled, field_image])
+
+
+def draw_objects(field_image, objects, board):
+    """Marks every detected object in a copy of the straight field: a dot at its centre and its label."""
+    result = field_image.copy()
+    for item in objects:
+        center = unit_to_pixel(item.x, item.y, board)
+        cv2.circle(result, center, 5, DOT_COLOR, -1)
+        lines = [_ascii(item.name()), item.position()]
+        for line_number, line in enumerate(lines):
+            origin = (center[0] - 40, center[1] + 22 + 18 * line_number)
+            cv2.putText(result, line, origin, cv2.FONT_HERSHEY_SIMPLEX, 0.5, LABEL_COLOR, 1, cv2.LINE_AA)
+    return result
+
+
+def _ascii(text):
+    """Replaces umlauts, e.g. "grün Würfel" becomes "gruen Wuerfel"."""
+    return "".join(ASCII_REPLACEMENTS.get(letter, letter) for letter in text)
