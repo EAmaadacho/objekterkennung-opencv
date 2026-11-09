@@ -1,0 +1,20 @@
+{
+  "camera_index": 0,
+  "board": {
+    "field_mm": 180,
+    "marker_mm": 30,
+    "marker_gap_mm": 8,
+    "warp_px": 600
+  },
+  "saturation_min": 80,
+  "value_min": 60,
+  "hue_ranges": {
+    "red": [[0, 10], [170, 180]],
+    "yellow": [[20, 35]],
+    "green": [[40, 85]],
+    "blue": [[95, 130]]
+  },
+  "min_area_px": 400,
+  "stable_frames": 10,
+  "move_threshold": 0.02
+}
