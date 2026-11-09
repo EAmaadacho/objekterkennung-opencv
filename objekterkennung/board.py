@@ -54,6 +54,15 @@ def pixel_to_unit(pixel_x, pixel_y, board):
     return pixel_x / size, 1 - pixel_y / size
 
 
+def unit_to_pixel(x, y, board):
+    """The way back from unit-square coordinates to a pixel of the straight field.
+
+    (0.5, 0.75) in a 600 px field is pixel (300, 150).
+    """
+    size = board.warp_px
+    return round(x * size), round((1 - y) * size)
+
+
 def _marker_corners_px(board, marker_id):
     """Where the four corners of a marker lie in the straight field image, in pixels.
 

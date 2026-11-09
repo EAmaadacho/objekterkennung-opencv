@@ -9,6 +9,7 @@ from objekterkennung.board import (
     find_markers,
     pixel_to_unit,
     straighten_field,
+    unit_to_pixel,
 )
 from objekterkennung.config import load_settings
 
@@ -66,6 +67,14 @@ def test_A3_pixel_to_unit_flips_y():
     x, y = pixel_to_unit(300, 150, board)
 
     assert (x, y) == (0.5, 0.75)
+
+
+def test_A3_unit_to_pixel_is_the_way_back():
+    board = load_settings().board
+
+    pixel = unit_to_pixel(0.5, 0.75, board)
+
+    assert pixel == (300, 150)
 
 
 def _draw_board(board, red_dot_at=None):
