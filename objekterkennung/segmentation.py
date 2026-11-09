@@ -6,6 +6,10 @@ import numpy as np
 # 5 px in the 600 px field is 1.5 mm: big enough to remove noise, too small to eat an object.
 MORPH_KERNEL_PX = 5
 HUE_MAX = 180
+# A seed is the inner part of an object: every pixel with at least this share of the
+# largest distance to the border. 0.8 keeps one seed for a cuboid, but two for two
+# cubes that touch with an offset.
+SEED_RATIO = 0.8
 
 
 def color_mask(field_image, color, settings):
@@ -34,3 +38,39 @@ def clean_mask(mask):
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (MORPH_KERNEL_PX, MORPH_KERNEL_PX))
     opened = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
     return cv2.morphologyEx(opened, cv2.MORPH_CLOSE, kernel)
+
+
+def split_touching(mask, min_area_px):
+    """Splits a colour mask into one mask per object, also when objects touch.
+
+    Uses the watershed method: the distance transform finds the centre of
+    every object as a "hill", and watershed draws the border in the "valley"
+    between two hills. Areas smaller than min_area_px are dropped as noise.
+    """
+    count, labels = cv2.connectedComponents(mask)
+    objects = []
+    for label in range(1, count):
+        part = np.where(labels == label, 255, 0).astype(np.uint8)
+        if cv2.countNonZero(part) < min_area_px:
+            continue
+        objects.extend(_split_one_part(part, min_area_px))
+    return objects
+
+
+def _split_one_part(part, min_area_px):
+    """Watershed on one connected area; returns one mask per found object."""
+    distance = cv2.distanceTransform(part, cv2.DIST_L2, 5)
+    seeds = np.where(distance >= SEED_RATIO * distance.max(), 255, 0).astype(np.uint8)
+    seed_count, markers = cv2.connectedComponents(seeds)
+    if seed_count <= 2:
+        return [part]
+    # Marker 1 is the background, the seeds are 2, 3, ... and 0 means "still unknown".
+    markers = markers + 1
+    markers[(part == 255) & (seeds == 0)] = 0
+    cv2.watershed(cv2.cvtColor(part, cv2.COLOR_GRAY2BGR), markers)
+    pieces = []
+    for marker in range(2, seed_count + 1):
+        piece = np.where(markers == marker, 255, 0).astype(np.uint8)
+        if cv2.countNonZero(piece) >= min_area_px:
+            pieces.append(piece)
+    return pieces

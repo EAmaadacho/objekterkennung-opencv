@@ -4,13 +4,14 @@ import cv2
 import numpy as np
 
 from objekterkennung.config import load_settings
-from objekterkennung.segmentation import clean_mask, color_mask
+from objekterkennung.segmentation import clean_mask, color_mask, split_touching
 
 FIELD_PX = 600
 WHITE = (255, 255, 255)
 RED = (40, 30, 210)
 BLUE = (200, 90, 30)
 SHADOW_GREY = (150, 150, 150)
+MIN_AREA_PX = 400
 
 
 def test_A2_red_block_is_found_in_red_mask():
@@ -54,6 +55,44 @@ def test_A2_clean_mask_removes_noise_and_fills_holes():
 
     assert cleaned[5, 5] == 0
     assert cleaned[60, 60] == 255
+
+
+def test_A5_two_touching_cubes_are_split():
+    mask = np.zeros((FIELD_PX, FIELD_PX), dtype=np.uint8)
+    cv2.rectangle(mask, (100, 100), (180, 180), 255, -1)
+    cv2.rectangle(mask, (181, 130), (261, 210), 255, -1)
+
+    objects = split_touching(mask, MIN_AREA_PX)
+
+    assert len(objects) == 2
+
+
+def test_A5_cuboid_stays_one_object():
+    mask = np.zeros((FIELD_PX, FIELD_PX), dtype=np.uint8)
+    cv2.rectangle(mask, (100, 100), (266, 183), 255, -1)
+
+    objects = split_touching(mask, MIN_AREA_PX)
+
+    assert len(objects) == 1
+
+
+def test_A5_two_touching_spheres_are_split():
+    mask = np.zeros((FIELD_PX, FIELD_PX), dtype=np.uint8)
+    cv2.circle(mask, (200, 300), 75, 255, -1)
+    cv2.circle(mask, (348, 300), 75, 255, -1)
+
+    objects = split_touching(mask, MIN_AREA_PX)
+
+    assert len(objects) == 2
+
+
+def test_A5_tiny_specks_are_dropped():
+    mask = np.zeros((FIELD_PX, FIELD_PX), dtype=np.uint8)
+    cv2.rectangle(mask, (10, 10), (15, 15), 255, -1)
+
+    objects = split_touching(mask, MIN_AREA_PX)
+
+    assert objects == []
 
 
 def _empty_field():
