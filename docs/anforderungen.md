@@ -9,7 +9,7 @@ Die Anforderungen stammen aus der Aufgabenstellung „PALG: Anwendung OpenCV“ 
 | A3 | Die Position wird im Einheitsquadrat (0,0)–(1,1) ausgegeben und ist mit dem aufgedruckten Raster überprüfbar. | `board.py`, `tools/make_board.py` | `test_board.py`, `test_config.py` |
 | A4 | Veränderungen (neu, entfernt, verschoben) werden automatisch erkannt und gemeldet. | `tracker.py` | `test_tracker.py` |
 | A5 | Objekte, die sich berühren, werden getrennt erkannt. | `segmentation.py` | `test_segmentation.py` |
-| A6 | Live-Bild einer Kamera; keine Netzwerkkommunikation zur Laufzeit; keine LLMs zur Erkennung. | `camera.py`, `main.py` | – (Vorführung) |
+| A6 | Live-Bild einer Kamera; keine Netzwerkkommunikation zur Laufzeit; keine LLMs zur Erkennung. | `camera.py`, `display.py`, `main.py` | `test_camera.py`, `test_display.py` |
 | A7 | Kamera, Farbbereiche und Schwellwerte sind ohne Codeänderung einstellbar (config.json, Kalibriermodus). | `config.py`, `calibration.py` | `test_config.py` |
 
 ## Objektmenge
@@ -20,9 +20,9 @@ Die Anforderungen stammen aus der Aufgabenstellung „PALG: Anwendung OpenCV“ 
 | 2 | blaue Würfel |
 | 2 | gelbe Quader |
 | 1 | grüner Quader |
-| 2 | grüne Dreiecksprismen |
+| 2 | blaue Dreiecksprismen |
 | 1 | rotes Dreiecksprisma |
-| 2 | blaue Kugeln |
 | 1 | gelbe Kugel |
+| 1 | grüne Kugel |
 
-4 Formen, 4 Farben, jede Form in 2 Farben, 5 Objekte doppelt, alle einfarbig und dreidimensional.
+12 Objekte: 4 Formen, 4 Farben, jede Form in mindestens 2 Farben, 4 Objekte doppelt, alle einfarbig und dreidimensional. Die Dreiecksprismen liegen auf ihrer Dreiecksfläche, damit sie von oben als Dreieck zu sehen sind.
