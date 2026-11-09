@@ -49,13 +49,13 @@ def draw_objects(field_image, objects, board):
     for item in objects:
         center = unit_to_pixel(item.x, item.y, board)
         cv2.circle(result, center, 5, DOT_COLOR, -1)
-        lines = [_ascii(item.name()), item.position()]
+        lines = [to_ascii(item.name()), item.position()]
         for line_number, line in enumerate(lines):
             origin = (center[0] - 40, center[1] + 22 + 18 * line_number)
             cv2.putText(result, line, origin, cv2.FONT_HERSHEY_SIMPLEX, 0.5, LABEL_COLOR, 1, cv2.LINE_AA)
     return result
 
 
-def _ascii(text):
+def to_ascii(text):
     """Replaces umlauts, e.g. "grün Würfel" becomes "gruen Wuerfel"."""
     return "".join(ASCII_REPLACEMENTS.get(letter, letter) for letter in text)

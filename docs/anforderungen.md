@@ -10,7 +10,7 @@ Die Anforderungen stammen aus der Aufgabenstellung „PALG: Anwendung OpenCV“ 
 | A4 | Veränderungen (neu, entfernt, verschoben) werden automatisch erkannt und gemeldet. | `tracker.py` | `test_tracker.py` |
 | A5 | Objekte, die sich berühren, werden getrennt erkannt. | `segmentation.py` | `test_segmentation.py`, `test_detector.py` |
 | A6 | Live-Bild einer Kamera; keine Netzwerkkommunikation zur Laufzeit; keine LLMs zur Erkennung. | `camera.py`, `display.py`, `main.py` | `test_camera.py`, `test_display.py` |
-| A7 | Kamera, Farbbereiche und Schwellwerte sind ohne Codeänderung einstellbar (config.json, Kalibriermodus). | `config.py`, `calibration.py` | `test_config.py` |
+| A7 | Kamera, Farbbereiche und Schwellwerte sind ohne Codeänderung einstellbar (config.json, Kalibriermodus). | `config.py`, `calibration.py` | `test_config.py`, `test_calibration.py` |
 
 ## Objektmenge
 
