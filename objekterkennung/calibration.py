@@ -28,31 +28,35 @@ HELP_TEXT = "w = speichern, q = zurueck"
 def run_calibration(capture, path=DEFAULT_CONFIG_PATH):
     """Shows the field and the mask of one colour; the sliders change the HSV range live.
 
+    Hue and minimum saturation belong to the chosen colour, the minimum brightness to all colours.
+
     "Farbe" selects red (0), yellow (1), green (2) or blue (3). The mask on the
     right should be white exactly where the blocks of that colour lie.
     """
     settings = load_settings(path)
     hue_ranges = dict(settings.hue_ranges)
+    saturation_min = dict(settings.saturation_min)
     cv2.namedWindow(WINDOW_NAME)
     cv2.createTrackbar(COLOR_SLIDER, WINDOW_NAME, 0, len(COLOR_NAMES) - 1, _ignore)
     cv2.createTrackbar(HUE_LOW_SLIDER, WINDOW_NAME, 0, HUE_MAX, _ignore)
     cv2.createTrackbar(HUE_HIGH_SLIDER, WINDOW_NAME, 0, HUE_MAX, _ignore)
-    cv2.createTrackbar(SATURATION_SLIDER, WINDOW_NAME, settings.saturation_min, 255, _ignore)
+    cv2.createTrackbar(SATURATION_SLIDER, WINDOW_NAME, 0, 255, _ignore)
     cv2.createTrackbar(VALUE_SLIDER, WINDOW_NAME, settings.value_min, 255, _ignore)
     shown_color = None
     homography = None
     while True:
         color = COLOR_NAMES[cv2.getTrackbarPos(COLOR_SLIDER, WINDOW_NAME)]
         if color != shown_color:
-            # A new colour was chosen: put its saved range on the sliders.
+            # A new colour was chosen: put its saved values on the sliders.
             low, high = bounds_from_hue_ranges(hue_ranges[color])
             cv2.setTrackbarPos(HUE_LOW_SLIDER, WINDOW_NAME, low)
             cv2.setTrackbarPos(HUE_HIGH_SLIDER, WINDOW_NAME, high)
+            cv2.setTrackbarPos(SATURATION_SLIDER, WINDOW_NAME, saturation_min[color])
             shown_color = color
         low = cv2.getTrackbarPos(HUE_LOW_SLIDER, WINDOW_NAME)
         high = cv2.getTrackbarPos(HUE_HIGH_SLIDER, WINDOW_NAME)
         hue_ranges[color] = hue_ranges_from_bounds(low, high)
-        saturation_min = cv2.getTrackbarPos(SATURATION_SLIDER, WINDOW_NAME)
+        saturation_min[color] = cv2.getTrackbarPos(SATURATION_SLIDER, WINDOW_NAME)
         value_min = cv2.getTrackbarPos(VALUE_SLIDER, WINDOW_NAME)
         current = replace(settings, hue_ranges=hue_ranges, saturation_min=saturation_min, value_min=value_min)
 
@@ -104,7 +108,7 @@ def save_colors(path, hue_ranges, saturation_min, value_min):
     with open(path, encoding="utf-8") as file:
         raw = json.load(file)
     raw["hue_ranges"] = {name: [list(hue_range) for hue_range in hue_ranges[name]] for name in COLOR_NAMES}
-    raw["saturation_min"] = saturation_min
+    raw["saturation_min"] = {name: saturation_min[name] for name in COLOR_NAMES}
     raw["value_min"] = value_min
     text = json.dumps(raw, indent=2)
     # Keeps the short form [[0, 10], [170, 180]] instead of one number per line.

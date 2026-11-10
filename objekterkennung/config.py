@@ -42,7 +42,7 @@ class Settings:
 
     camera_index: int
     board: Board
-    saturation_min: int
+    saturation_min: dict
     value_min: int
     hue_ranges: dict
     min_area_px: int
@@ -58,13 +58,20 @@ def load_settings(path=DEFAULT_CONFIG_PATH):
     return Settings(
         camera_index=raw["camera_index"],
         board=Board(**raw["board"]),
-        saturation_min=raw["saturation_min"],
+        saturation_min=_per_color(raw["saturation_min"]),
         value_min=raw["value_min"],
         hue_ranges={name: [tuple(r) for r in ranges] for name, ranges in raw["hue_ranges"].items()},
         min_area_px=raw["min_area_px"],
         stable_frames=raw["stable_frames"],
         move_threshold=raw["move_threshold"],
     )
+
+
+def _per_color(value):
+    """Allows one number for all colours or one number per colour, e.g. {"blue": 140, ...}."""
+    if isinstance(value, dict):
+        return {name: value[name] for name in COLOR_NAMES}
+    return {name: value for name in COLOR_NAMES}
 
 
 def _check_colors(hue_ranges):

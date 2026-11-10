@@ -29,12 +29,13 @@ def test_A7_saved_colors_are_loaded_again(tmp_path):
     path.write_text(DEFAULT_CONFIG_PATH.read_text(encoding="utf-8"), encoding="utf-8")
     hue_ranges = dict(load_settings(path).hue_ranges)
     hue_ranges["blue"] = [(100, 125)]
+    saturation_min = {"red": 90, "yellow": 90, "green": 90, "blue": 150}
 
-    save_colors(path, hue_ranges, saturation_min=90, value_min=50)
+    save_colors(path, hue_ranges, saturation_min, value_min=50)
 
     settings = load_settings(path)
     assert settings.hue_ranges["blue"] == [(100, 125)]
-    assert (settings.saturation_min, settings.value_min) == (90, 50)
+    assert (settings.saturation_min["blue"], settings.value_min) == (150, 50)
     assert settings.camera_index == json.loads(DEFAULT_CONFIG_PATH.read_text(encoding="utf-8"))["camera_index"]
 
 

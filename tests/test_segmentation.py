@@ -11,6 +11,8 @@ WHITE = (255, 255, 255)
 RED = (40, 30, 210)
 BLUE = (200, 90, 30)
 SHADOW_GREY = (150, 150, 150)
+# Measured: the webcam makes the paper slightly blue, a shadow on it has hue 109, saturation 89.
+SHADOW_BLUISH = (150, 120, 98)
 # Measured on the real objects: the ball has hue 16 (orange-yellow), the red blocks hue 0.
 YELLOW_BALL = (38, 149, 245)
 MIN_AREA_PX = 400
@@ -45,6 +47,16 @@ def test_A2_grey_shadow_is_ignored():
     masks = [color_mask(field, color, settings) for color in settings.hue_ranges]
 
     assert not any(mask.any() for mask in masks)
+
+
+def test_A2_bluish_shadow_on_paper_is_not_blue():
+    settings = load_settings()
+    field = _empty_field()
+    cv2.rectangle(field, (200, 200), (400, 400), SHADOW_BLUISH, -1)
+
+    mask = color_mask(field, "blue", settings)
+
+    assert not mask.any()
 
 
 def test_A2_clean_mask_removes_noise_and_fills_holes():

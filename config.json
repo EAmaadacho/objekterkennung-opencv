@@ -6,7 +6,12 @@
     "marker_gap_mm": 8,
     "warp_px": 600
   },
-  "saturation_min": 80,
+  "saturation_min": {
+    "red": 80,
+    "yellow": 80,
+    "green": 80,
+    "blue": 140
+  },
   "value_min": 60,
   "hue_ranges": {
     "red": [[0, 3], [160, 180]],
