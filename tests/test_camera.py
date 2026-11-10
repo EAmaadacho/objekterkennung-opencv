@@ -1,9 +1,11 @@
 """Tests for the camera module; they never need a real camera."""
 
+import cv2
 import numpy as np
 import pytest
 
-from objekterkennung.camera import CameraError, open_camera, read_frame
+from objekterkennung import camera
+from objekterkennung.camera import FRAME_HEIGHT, FRAME_WIDTH, CameraError, open_camera, read_frame
 
 MISSING_CAMERA_INDEX = 99
 
@@ -17,6 +19,19 @@ class FakeCapture:
 
     def read(self):
         return self._ok, self._frame
+
+
+class FakeOpenCamera:
+    """Stands in for an opened cv2.VideoCapture and remembers the requested settings."""
+
+    def __init__(self, index):
+        self.requested = {}
+
+    def isOpened(self):
+        return True
+
+    def set(self, setting, value):
+        self.requested[setting] = value
 
 
 def test_A6_missing_camera_gives_clear_error():
@@ -40,3 +55,12 @@ def test_A6_lost_camera_gives_clear_error():
 
     with pytest.raises(CameraError, match="stopped"):
         read_frame(capture)
+
+
+def test_A6_camera_is_asked_for_full_hd(monkeypatch):
+    monkeypatch.setattr(camera.cv2, "VideoCapture", FakeOpenCamera)
+
+    capture = open_camera(1)
+
+    assert capture.requested[cv2.CAP_PROP_FRAME_WIDTH] == FRAME_WIDTH
+    assert capture.requested[cv2.CAP_PROP_FRAME_HEIGHT] == FRAME_HEIGHT

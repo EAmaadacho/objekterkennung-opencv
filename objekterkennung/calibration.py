@@ -58,7 +58,12 @@ def run_calibration(capture, path=DEFAULT_CONFIG_PATH):
 
         frame = read_frame(capture)
         homography = find_homography(frame, settings.board, last_homography=homography)
-        image = frame if homography is None else straighten_field(frame, homography, settings.board)
+        if homography is None:
+            # Without a field the whole camera image is shown, made smaller so both halves fit on the screen.
+            scale = settings.board.warp_px / frame.shape[0]
+            image = cv2.resize(frame, (round(frame.shape[1] * scale), settings.board.warp_px))
+        else:
+            image = straighten_field(frame, homography, settings.board)
         mask = color_mask(image, color, current)
         view = np.hstack([image, cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)])
         title = f"{to_ascii(COLOR_LABELS[color])}: {HELP_TEXT}"

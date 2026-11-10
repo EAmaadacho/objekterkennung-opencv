@@ -2,6 +2,11 @@
 
 import cv2
 
+# Without this request many webcams send 640 x 480, which is a cut-out from the
+# middle of the sensor: the picture looks zoomed in and the board does not fit.
+FRAME_WIDTH = 1920
+FRAME_HEIGHT = 1080
+
 
 class CameraError(RuntimeError):
     """Raised when the webcam cannot be opened or stops delivering frames."""
@@ -20,6 +25,9 @@ def open_camera(index):
             f"No camera found at index {index}. "
             'Check the USB cable or change "camera_index" in config.json.'
         )
+    # The camera picks the nearest size it supports, e.g. 1280 x 720.
+    capture.set(cv2.CAP_PROP_FRAME_WIDTH, FRAME_WIDTH)
+    capture.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT)
     return capture
 
 
