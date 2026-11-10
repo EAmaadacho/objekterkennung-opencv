@@ -1,6 +1,6 @@
 """Creates the printable A4 board: 18 cm x 18 cm field, four ArUco markers and a 0.1 grid (A3).
 
-Print it at 100 % ("actual size", not "fit to page") and check the 10 cm scale bar with a ruler.
+Print it at 100 % ("actual size", not "fit to page") and check the field frame with a ruler: 18 cm.
 Start from the project folder: python tools/make_board.py
 """
 
@@ -33,7 +33,6 @@ def main():
     _draw_markers(pdf, board, field_left, field_top)
     _draw_grid(pdf, board, field_left, field_top)
     _draw_axis_labels(pdf, board, field_left, field_top)
-    _draw_title_and_scale_bar(pdf)
 
     pdf.showPage()
     pdf.save()
@@ -55,9 +54,6 @@ def _draw_markers(pdf, board, field_left, field_top):
         top = field_top + center_y - half
         image = ImageReader(Image.fromarray(marker))
         pdf.drawImage(image, left * mm, _y(top + board.marker_mm), board.marker_mm * mm, board.marker_mm * mm)
-        pdf.setFont("Helvetica", 6)
-        pdf.setFillGray(0.5)
-        pdf.drawCentredString((left + half) * mm, _y(top + board.marker_mm + 3), f"ID {marker_id}")
 
 
 def _draw_grid(pdf, board, field_left, field_top):
@@ -91,23 +87,6 @@ def _draw_axis_labels(pdf, board, field_left, field_top):
     pdf.drawRightString((field_left + size - 1.5) * mm, _y(field_top + 4.5), "(1,1)")
     pdf.drawString((field_left + size - 12) * mm, _y(bottom - 2.5), "x →")
     pdf.drawString((field_left + 1.5) * mm, _y(field_top + 4.5), "y ↑")
-
-
-def _draw_title_and_scale_bar(pdf):
-    """A 10 cm bar to check that the printer did not scale the page."""
-    center = PAGE_WIDTH_MM / 2
-    pdf.setFont("Helvetica-Bold", 9)
-    pdf.setFillGray(0.2)
-    pdf.drawCentredString(center * mm, _y(25), "PALG – Anwendung OpenCV – Spielfeld 18 cm × 18 cm")
-    pdf.setFont("Helvetica", 7)
-    pdf.drawCentredString(center * mm, _y(30), "Mit 100 % drucken (Tatsächliche Größe). Balken muss 10,0 cm lang sein:")
-    pdf.setStrokeGray(0.0)
-    pdf.setLineWidth(1.2)
-    start = center - 50
-    pdf.line(start * mm, _y(35), (start + 100) * mm, _y(35))
-    for tick in (0, 50, 100):
-        pdf.line((start + tick) * mm, _y(33.5), (start + tick) * mm, _y(36.5))
-    pdf.drawCentredString(center * mm, _y(40), "10 cm")
 
 
 if __name__ == "__main__":

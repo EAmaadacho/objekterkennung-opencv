@@ -6,7 +6,7 @@ Entstanden im Modul PALG (Projekt Algorithmen) an der FHDW, Studiengruppe MFAX42
 
 ## Aufbau vor dem Start
 
-1. `assets/Spielfeld_A4.pdf` auf weißes A4-Papier drucken, mit **100 % / „Tatsächliche Größe“**. Den 10-cm-Balken mit dem Lineal nachmessen und das Blatt auf Pappe kleben.
+1. `assets/Spielfeld_A4.pdf` auf weißes A4-Papier drucken, mit **100 % / „Tatsächliche Größe“**. Den Feldrahmen mit dem Lineal nachmessen (18 cm) und das Blatt auf Pappe kleben.
 2. Eine USB-Webcam etwa 45–50 cm senkrecht über der Mitte des Blatts befestigen. Alle vier Marker müssen im Bild sein.
 3. Eine feste Lampe einschalten; Fensterlicht vermeiden.
 
