@@ -7,7 +7,7 @@
     "warp_px": 600
   },
   "saturation_min": {
-    "red": 80,
+    "red": 120,
     "yellow": 80,
     "green": 80,
     "blue": 140
@@ -19,7 +19,7 @@
     "green": [[40, 97]],
     "blue": [[100, 130]]
   },
-  "min_area_px": 400,
+  "min_area_px": 3000,
   "stable_frames": 10,
   "move_threshold": 0.02
 }
