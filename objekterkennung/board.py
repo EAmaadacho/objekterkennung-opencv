@@ -6,6 +6,9 @@ import numpy as np
 # The same marker family that tools/make_board.py prints on the board.
 ARUCO_DICTIONARY = cv2.aruco.DICT_4X4_50
 MARKER_IDS = (0, 1, 2, 3)
+# The straight image shows 6 mm of paper around the field as well, so a block that sticks
+# out a little over the edge is still seen whole. 6 mm stays clear of the markers 8 mm away.
+FIELD_MARGIN_MM = 6
 
 
 def find_markers(image):
@@ -39,37 +42,50 @@ def find_homography(image, board, last_homography=None):
 
 
 def straighten_field(image, homography, board):
-    """Cuts out the field and turns it into a square, e.g. 600 x 600 pixels for warp_px 600."""
-    size = board.warp_px
+    """Cuts out the field with its margin and turns it into a square, e.g. 640 x 640 pixels for warp_px 600."""
+    size = field_image_size(board)
     return cv2.warpPerspective(image, homography, (size, size))
 
 
-def pixel_to_unit(pixel_x, pixel_y, board):
-    """Converts a pixel of the straight field into unit-square coordinates.
+def margin_px(board):
+    """Width of the paper margin around the field in the straight image, e.g. 20 px."""
+    return round(FIELD_MARGIN_MM * board.warp_px / board.field_mm)
 
-    The image y axis points down, the field y axis points up, so y is flipped:
-    pixel (300, 150) in a 600 px field is (0.5, 0.75).
+
+def field_image_size(board):
+    """Side length of the straight image: the field plus the margin on both sides, e.g. 640 px."""
+    return board.warp_px + 2 * margin_px(board)
+
+
+def pixel_to_unit(pixel_x, pixel_y, board):
+    """Converts a pixel of the straight image into unit-square coordinates.
+
+    The margin is taken off first. The image y axis points down, the field y axis
+    points up, so y is flipped: pixel (320, 170) with a 20 px margin is (0.5, 0.75).
     """
     size = board.warp_px
-    return pixel_x / size, 1 - pixel_y / size
+    margin = margin_px(board)
+    return (pixel_x - margin) / size, 1 - (pixel_y - margin) / size
 
 
 def unit_to_pixel(x, y, board):
-    """The way back from unit-square coordinates to a pixel of the straight field.
+    """The way back from unit-square coordinates to a pixel of the straight image.
 
-    (0.5, 0.75) in a 600 px field is pixel (300, 150).
+    (0.5, 0.75) is pixel (320, 170) for a 600 px field with a 20 px margin.
     """
     size = board.warp_px
-    return round(x * size), round((1 - y) * size)
+    margin = margin_px(board)
+    return round(x * size) + margin, round((1 - y) * size) + margin
 
 
 def _marker_corners_px(board, marker_id):
     """Where the four corners of a marker lie in the straight field image, in pixels.
 
     Markers lie outside the field, so some values are negative or larger than
-    warp_px. That is fine: they only serve as reference points.
+    the image. That is fine: they only serve as reference points.
     """
     scale = board.warp_px / board.field_mm
+    shift_mm = FIELD_MARGIN_MM
     center_x, center_y = board.marker_centers_mm()[marker_id]
     half = board.marker_mm / 2
     corners_mm = [
@@ -78,4 +94,4 @@ def _marker_corners_px(board, marker_id):
         (center_x + half, center_y + half),
         (center_x - half, center_y + half),
     ]
-    return np.array(corners_mm, dtype=np.float32) * scale
+    return (np.array(corners_mm, dtype=np.float32) + shift_mm) * scale

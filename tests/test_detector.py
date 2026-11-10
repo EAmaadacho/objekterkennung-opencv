@@ -6,7 +6,9 @@ import numpy as np
 from objekterkennung.config import load_settings
 from objekterkennung.detector import detect_objects
 
-FIELD_PX = 600
+# The straight image is the 600 px field plus a 20 px margin on every side.
+FIELD_PX = 640
+MARGIN_PX = 20
 WHITE = (255, 255, 255)
 RED = (40, 30, 210)
 YELLOW = (40, 200, 230)
@@ -18,10 +20,10 @@ CUBE_PX = 83
 def test_A1_A2_A3_four_objects_are_found_with_shape_colour_and_position():
     settings = load_settings()
     field = np.full((FIELD_PX, FIELD_PX, 3), WHITE, dtype=np.uint8)
-    _square(field, center=(150, 150), size=CUBE_PX, color=RED)
-    cv2.rectangle(field, (370, 110), (370 + 2 * CUBE_PX, 110 + CUBE_PX), YELLOW, -1)
-    cv2.circle(field, (150, 450), 75, GREEN, -1)
-    cv2.fillPoly(field, [np.array([[410, 490], [493, 490], [451, 418]])], BLUE)
+    _square(field, center=(150 + MARGIN_PX, 150 + MARGIN_PX), size=CUBE_PX, color=RED)
+    cv2.rectangle(field, (390, 130), (390 + 2 * CUBE_PX, 130 + CUBE_PX), YELLOW, -1)
+    cv2.circle(field, (170, 470), 75, GREEN, -1)
+    cv2.fillPoly(field, [np.array([[430, 510], [513, 510], [471, 438]])], BLUE)
 
     objects = detect_objects(field, settings)
 

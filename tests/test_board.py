@@ -64,7 +64,7 @@ def test_A3_no_markers_and_no_history_gives_none():
 def test_A3_pixel_to_unit_flips_y():
     board = load_settings().board
 
-    x, y = pixel_to_unit(300, 150, board)
+    x, y = pixel_to_unit(320, 170, board)
 
     assert (x, y) == (0.5, 0.75)
 
@@ -74,7 +74,7 @@ def test_A3_unit_to_pixel_is_the_way_back():
 
     pixel = unit_to_pixel(0.5, 0.75, board)
 
-    assert pixel == (300, 150)
+    assert pixel == (320, 170)
 
 
 def _draw_board(board, red_dot_at=None):

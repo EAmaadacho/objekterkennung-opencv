@@ -26,7 +26,7 @@ def draw_markers(image, markers):
 
 
 def compose_window(camera_image, field_image):
-    """Puts both images next to each other, e.g. a 600 px high camera image and the 600 x 600 field.
+    """Puts both images next to each other, e.g. a 640 px high camera image and the 640 x 640 field with its margin.
 
     Without a field (no homography yet) only the camera image is shown,
     with the text "Spielfeld nicht gefunden" in the top-left corner.
