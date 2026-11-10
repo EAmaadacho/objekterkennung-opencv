@@ -12,6 +12,7 @@ from objekterkennung.camera import open_camera, read_frame
 from objekterkennung.config import load_settings
 from objekterkennung.detector import detect_objects
 from objekterkennung.display import compose_window, draw_markers, draw_objects
+from objekterkennung.smoothing import FrameSmoother
 from objekterkennung.tracker import ChangeTracker
 
 WINDOW_NAME = "Objekterkennung"
@@ -31,6 +32,7 @@ def main():
         run_calibration(capture)
         settings = load_settings()
     tracker = ChangeTracker(settings.stable_frames, settings.move_threshold)
+    smoother = FrameSmoother(settings.stable_frames)
     homography = None
     print("Start. Tasten: q = beenden, Leertaste = Objektliste, s = Bildschirmfoto, c = Kalibrierung")
     try:
@@ -40,11 +42,11 @@ def main():
             field_view = None
             if homography is not None:
                 field = straighten_field(frame, homography, settings.board)
-                objects = detect_objects(field, settings)
+                # The smoothed objects keep their name when a single frame is unclear.
+                objects = smoother.update(detect_objects(field, settings))
                 for change in tracker.update(objects):
                     print(change.text())
-                # Only the stable scene is drawn, so a label does not flicker when one frame is unclear.
-                field_view = draw_objects(field, tracker.current_objects(), settings.board)
+                field_view = draw_objects(field, objects, settings.board)
             window = compose_window(draw_markers(frame, find_markers(frame)), field_view)
             cv2.imshow(WINDOW_NAME, window)
             # waitKey(1) waits 1 ms for a key and lets the window redraw itself.
