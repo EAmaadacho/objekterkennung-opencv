@@ -56,6 +56,13 @@ def draw_objects(field_image, objects, board):
     return result
 
 
+def draw_notice(image, text):
+    """Writes a red notice into the top-left corner of a copy, e.g. "Hand im Feld - Meldungen pausiert"."""
+    result = image.copy()
+    cv2.putText(result, to_ascii(text), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, TEXT_COLOR, 2)
+    return result
+
+
 def to_ascii(text):
     """Replaces umlauts, e.g. "grün Würfel" becomes "gruen Wuerfel"."""
     return "".join(ASCII_REPLACEMENTS.get(letter, letter) for letter in text)

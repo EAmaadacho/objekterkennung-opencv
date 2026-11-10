@@ -3,7 +3,7 @@
 import numpy as np
 
 from objekterkennung.config import load_settings
-from objekterkennung.display import DOT_COLOR, compose_window, draw_markers, draw_objects
+from objekterkennung.display import DOT_COLOR, compose_window, draw_markers, draw_notice, draw_objects
 from objekterkennung.models import DetectedObject
 
 GREEN = (0, 255, 0)
@@ -46,3 +46,12 @@ def test_A3_detected_object_is_marked_at_its_position():
 
     assert tuple(result[150, 300]) == DOT_COLOR
     assert (field == 255).all()
+
+
+def test_A4_notice_is_written_without_changing_the_original():
+    image = np.zeros((200, 400, 3), dtype=np.uint8)
+
+    result = draw_notice(image, "Hand im Feld")
+
+    assert result.any()
+    assert not image.any()

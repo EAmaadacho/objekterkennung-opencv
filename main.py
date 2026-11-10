@@ -11,12 +11,14 @@ from objekterkennung.calibration import run_calibration
 from objekterkennung.camera import open_camera, read_frame
 from objekterkennung.config import load_settings
 from objekterkennung.detector import detect_objects
-from objekterkennung.display import compose_window, draw_markers, draw_objects
+from objekterkennung.display import compose_window, draw_markers, draw_notice, draw_objects
+from objekterkennung.hand import hand_in_field
 from objekterkennung.protocol import LabelProtocol
 from objekterkennung.smoothing import FrameSmoother
 from objekterkennung.tracker import ChangeTracker
 
 WINDOW_NAME = "Objekterkennung"
+HAND_TEXT = "Hand im Feld - Meldungen pausiert"
 QUIT_KEY = "q"
 LIST_KEY = " "
 SCREENSHOT_KEY = "s"
@@ -37,6 +39,7 @@ def main():
     smoother = FrameSmoother(settings.stable_frames)
     protocol = None
     homography = None
+    objects = []
     print("Start. Tasten: q = beenden, Leertaste = Objektliste, s = Bildschirmfoto, p = Protokoll an/aus, c = Kalibrierung")
     try:
         while True:
@@ -45,12 +48,18 @@ def main():
             field_view = None
             if homography is not None:
                 field = straighten_field(frame, homography, settings.board)
-                raw_objects = detect_objects(field, settings)
-                # The smoothed objects keep their name when a single frame is unclear.
-                objects = smoother.update(raw_objects)
-                for change in tracker.update(objects):
-                    print(change.text())
+                hand = hand_in_field(field, settings)
+                raw_objects = []
+                # While a hand is in the field nothing is counted, so a covered block is not reported as removed.
+                if not hand:
+                    raw_objects = detect_objects(field, settings)
+                    # The smoothed objects keep their name when a single frame is unclear.
+                    objects = smoother.update(raw_objects)
+                    for change in tracker.update(objects):
+                        print(change.text())
                 field_view = draw_objects(field, objects, settings.board)
+                if hand:
+                    field_view = draw_notice(field_view, HAND_TEXT)
             window = compose_window(draw_markers(frame, find_markers(frame)), field_view)
             cv2.imshow(WINDOW_NAME, window)
             if protocol is not None and field_view is not None:
