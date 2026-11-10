@@ -6,8 +6,9 @@ import cv2
 
 # How much of its smallest surrounding rectangle a shape fills:
 # square or rectangle about 1.0, circle pi/4 = 0.79, any triangle exactly 0.5.
+# A real prism has bevelled edges and a blurred tip, so it reaches up to about 0.7.
 BOX_FILL_MIN = 0.86
-TRIANGLE_FILL_MAX = 0.68
+TRIANGLE_FILL_MAX = 0.72
 # 4*pi*area/perimeter^2 is 1.0 for a circle and 0.79 for a square.
 CIRCLE_ROUNDNESS_MIN = 0.80
 # A cube is about 1:1 from above, a cuboid about 2:1.

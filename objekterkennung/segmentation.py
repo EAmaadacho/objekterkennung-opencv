@@ -53,8 +53,20 @@ def split_touching(mask, min_area_px):
         part = np.where(labels == label, 255, 0).astype(np.uint8)
         if cv2.countNonZero(part) < min_area_px:
             continue
-        objects.extend(_split_one_part(part, min_area_px))
+        objects.extend(_split_one_part(fill_holes(part), min_area_px))
     return objects
+
+
+def fill_holes(part):
+    """Fills every hole inside one object, e.g. a bright reflection on the ball.
+
+    A hole near the middle would give the distance transform two "hills",
+    and watershed would then cut one ball into two objects.
+    """
+    contours, _ = cv2.findContours(part, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    filled = np.zeros_like(part)
+    cv2.drawContours(filled, contours, -1, 255, thickness=cv2.FILLED)
+    return filled
 
 
 def _split_one_part(part, min_area_px):

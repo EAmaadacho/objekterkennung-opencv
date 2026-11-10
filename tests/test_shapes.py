@@ -63,6 +63,17 @@ def test_A1_triangle_is_a_prism(corners):
     assert shape == "prism"
 
 
+def test_A1_triangle_with_blunt_tip_is_still_a_prism():
+    # The real prisms have bevelled edges, so the camera sees the tip cut off.
+    mask = _empty_mask()
+    blunt_triangle = np.array([[160, 300], [320, 300], [271, 245], [209, 245]])
+    cv2.fillPoly(mask, [blunt_triangle], 255)
+
+    shape = classify_shape(mask)
+
+    assert shape == "prism"
+
+
 def test_A1_circle_is_a_sphere():
     mask = _empty_mask()
     cv2.circle(mask, (300, 300), SPHERE_RADIUS_PX, 255, -1)

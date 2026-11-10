@@ -88,6 +88,17 @@ def test_A5_two_touching_spheres_are_split():
     assert len(objects) == 2
 
 
+def test_A5_ball_with_reflection_stays_one_object():
+    # A bright reflection has almost no colour, so it leaves a hole in the mask.
+    mask = np.zeros((FIELD_PX, FIELD_PX), dtype=np.uint8)
+    cv2.circle(mask, (300, 300), 75, 255, -1)
+    cv2.circle(mask, (292, 300), 10, 0, -1)
+
+    objects = split_touching(mask, MIN_AREA_PX)
+
+    assert len(objects) == 1
+
+
 def test_A5_tiny_specks_are_dropped():
     mask = np.zeros((FIELD_PX, FIELD_PX), dtype=np.uint8)
     cv2.rectangle(mask, (10, 10), (15, 15), 255, -1)
