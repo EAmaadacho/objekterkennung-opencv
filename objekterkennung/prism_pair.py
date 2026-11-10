@@ -7,7 +7,7 @@ from objekterkennung.shapes import classify_shape
 
 # The joint between the two prisms runs along a diagonal of the square, i.e. about
 # 45 degrees to its sides. A few degrees of play allow for an imperfect fit.
-DIAGONAL_ANGLES = (41, 43, 45, 47, 49)
+DIAGONAL_ANGLES = (43, 45, 47)
 # How far the joint may lie beside the centre of the square, in pixels.
 MAX_OFFSET_PX = 7
 # The joint is compared with the strips this far away on both sides.
