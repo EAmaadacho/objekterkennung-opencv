@@ -54,7 +54,7 @@ Die Tests brauchen keine Kamera; sie arbeiten mit Bildern, die sie selbst zeichn
 |---|---|
 | `main.py` | Startpunkt: liest die Einstellungen, öffnet die Kamera und führt die Schleife pro Bild aus. |
 | `config.json` | Kamera, Spielfeldmaße, Farbbereiche (HSV) und Schwellwerte. |
-| [`objekterkennung/`](objekterkennung) | Der Code, ein Modul pro Aufgabe: `config` (Einstellungen), `camera` (Kamera), `board` (Marker finden, Feld entzerren), `segmentation` (Farbmasken, Trennen berührender Objekte), `shapes` (Form), `prism_pair` (zwei Prismen als Quadrat trennen), `detector` (Farbe, Form und Position aller Objekte), `smoothing` (Glättung über mehrere Bilder), `tracker` (Veränderungen), `hand` (Hand im Feld erkennen, Meldungen pausieren), `models` (Datenklassen), `display` (Anzeige), `calibration` (Kalibriermodus), `protocol` (Protokoll der Beschriftungen). |
+| [`objekterkennung/`](objekterkennung) | Der Code, ein Modul pro Aufgabe: `config` (Einstellungen), `camera` (Kamera), `board` (Marker finden, Feld entzerren), `segmentation` (Farbmasken, Trennen berührender Objekte), `ball` (Kugel aus berührenden Objekten herausschneiden), `shapes` (Form), `prism_pair` (zwei Prismen als Quadrat trennen), `detector` (Farbe, Form und Position aller Objekte), `smoothing` (Glättung über mehrere Bilder), `tracker` (Veränderungen), `hand` (Hand im Feld erkennen, Meldungen pausieren), `models` (Datenklassen), `display` (Anzeige), `calibration` (Kalibriermodus), `protocol` (Protokoll der Beschriftungen). |
 | [`tests/`](tests) | Automatische Tests mit pytest. |
 | [`tools/`](tools) | `make_board.py` erzeugt das Spielfeld-PDF aus den Maßen in `config.json`. |
 | [`assets/`](assets) | Das druckfertige Spielfeld. |

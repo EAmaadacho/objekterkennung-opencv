@@ -3,6 +3,8 @@
 import cv2
 import numpy as np
 
+from objekterkennung.ball import cut_ball
+
 # 5 px in the 600 px field is 1.5 mm: big enough to remove noise, too small to eat an object.
 MORPH_KERNEL_PX = 5
 HUE_MAX = 180
@@ -55,7 +57,9 @@ def clean_mask(mask):
 def split_touching(mask, min_area_px, field_image=None):
     """Splits a colour mask into one mask per object, also when objects touch.
 
-    First the visible edges of the field image cut the area into pieces: two
+    A ball is cut out first, because it can melt together with a block of the
+    same colour (e.g. the yellow ball and a yellow cuboid). Then the visible
+    edges of the field image cut the area into pieces: two
     cubes lying flush show a dark line between them. If that gives fewer than
     two seeds, the distance transform finds the centre of every object as a
     "hill" instead. In both cases watershed draws the final border.
@@ -69,6 +73,12 @@ def split_touching(mask, min_area_px, field_image=None):
         if cv2.countNonZero(part) < min_area_px:
             continue
         part = fill_holes(part)
+        ball, rest = cut_ball(part)
+        if ball is not None:
+            objects.append(ball)
+            # The rest may still hold several blocks, so it goes through the same steps.
+            objects.extend(split_touching(clean_mask(rest), min_area_px, field_image))
+            continue
         seeds = None if edges is None else _edge_seeds(part, edges, field_image)
         if seeds is not None and cv2.connectedComponents(seeds)[0] > 2:
             objects.extend(_watershed(part, seeds, field_image, min_area_px))
