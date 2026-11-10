@@ -21,10 +21,24 @@ class FakeCapture:
         return self._ok, self._frame
 
 
+class FlickeringCapture:
+    """Fails a few times first, then delivers the frame, like a camera that hiccups briefly."""
+
+    def __init__(self, failures, frame):
+        self._failures = failures
+        self._frame = frame
+
+    def read(self):
+        if self._failures > 0:
+            self._failures -= 1
+            return False, None
+        return True, self._frame
+
+
 class FakeOpenCamera:
     """Stands in for an opened cv2.VideoCapture and remembers the requested settings."""
 
-    def __init__(self, index):
+    def __init__(self, index, backend=None):
         self.requested = {}
 
     def isOpened(self):
@@ -64,3 +78,12 @@ def test_A6_camera_is_asked_for_full_hd(monkeypatch):
 
     assert capture.requested[cv2.CAP_PROP_FRAME_WIDTH] == FRAME_WIDTH
     assert capture.requested[cv2.CAP_PROP_FRAME_HEIGHT] == FRAME_HEIGHT
+
+
+def test_A6_single_failed_read_is_retried():
+    image = np.zeros((480, 640, 3), dtype=np.uint8)
+    capture = FlickeringCapture(failures=2, frame=image)
+
+    frame = read_frame(capture)
+
+    assert frame is image

@@ -1,11 +1,16 @@
 """Opens the USB webcam and reads single frames from it (A6)."""
 
+import sys
+
 import cv2
 
 # Without this request many webcams send 640 x 480, which is a cut-out from the
 # middle of the sensor: the picture looks zoomed in and the board does not fit.
 FRAME_WIDTH = 1920
 FRAME_HEIGHT = 1080
+# A single failed read can happen, e.g. when Windows briefly hands the camera to
+# another app. Only several failures in a row mean the camera is really gone.
+READ_ATTEMPTS = 5
 
 
 class CameraError(RuntimeError):
@@ -18,13 +23,17 @@ def open_camera(index):
     Index 0 is usually the built-in laptop camera, so the USB webcam is often
     index 1. The index is set in config.json ("camera_index").
     """
-    capture = cv2.VideoCapture(index)
+    # On Windows DirectShow handles the Full HD request more reliably than the default driver.
+    backend = cv2.CAP_DSHOW if sys.platform == "win32" else cv2.CAP_ANY
+    capture = cv2.VideoCapture(index, backend)
     if not capture.isOpened():
         capture.release()
         raise CameraError(
             f"No camera found at index {index}. "
             'Check the USB cable or change "camera_index" in config.json.'
         )
+    # MJPG is the compressed format in which USB webcams deliver Full HD fast enough.
+    capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
     # The camera picks the nearest size it supports, e.g. 1280 x 720.
     capture.set(cv2.CAP_PROP_FRAME_WIDTH, FRAME_WIDTH)
     capture.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT)
@@ -33,8 +42,12 @@ def open_camera(index):
 
 def read_frame(capture):
     """Reads the next image from the camera as a BGR array of shape (height, width, 3)."""
-    ok, frame = capture.read()
-    if not ok:
-        # read() fails when the cable is pulled while the program runs.
-        raise CameraError("The camera stopped delivering images.")
-    return frame
+    for _ in range(READ_ATTEMPTS):
+        ok, frame = capture.read()
+        if ok:
+            return frame
+    # read() keeps failing when the cable is pulled or another app took the camera.
+    raise CameraError(
+        "The camera stopped delivering images. Check the cable and close other apps "
+        "that use the camera, e.g. Teams or the camera settings."
+    )
