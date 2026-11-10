@@ -16,8 +16,8 @@
   "hue_ranges": {
     "red": [[0, 3], [160, 180]],
     "yellow": [[5, 40]],
-    "green": [[40, 85]],
-    "blue": [[95, 130]]
+    "green": [[40, 97]],
+    "blue": [[100, 130]]
   },
   "min_area_px": 400,
   "stable_frames": 10,
