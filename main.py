@@ -43,7 +43,8 @@ def main():
                 objects = detect_objects(field, settings)
                 for change in tracker.update(objects):
                     print(change.text())
-                field_view = draw_objects(field, objects, settings.board)
+                # Only the stable scene is drawn, so a label does not flicker when one frame is unclear.
+                field_view = draw_objects(field, tracker.current_objects(), settings.board)
             window = compose_window(draw_markers(frame, find_markers(frame)), field_view)
             cv2.imshow(WINDOW_NAME, window)
             # waitKey(1) waits 1 ms for a key and lets the window redraw itself.

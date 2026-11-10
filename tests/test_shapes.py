@@ -38,6 +38,17 @@ def test_A1_cube_with_visible_side_face_is_still_a_cube():
     assert shape == "cube"
 
 
+def test_A1_cube_with_dark_corners_is_not_a_sphere():
+    # Two dark corners drop out of the colour mask, so the outline becomes almost round.
+    mask = _empty_mask()
+    octagon = np.array([[235, 200], [283, 200], [283, 248], [248, 283], [200, 283], [200, 235]])
+    cv2.fillPoly(mask, [octagon], 255)
+
+    shape = classify_shape(mask)
+
+    assert shape == "cube"
+
+
 def test_A1_long_rectangle_is_a_cuboid():
     mask = _rotated_box(2 * CUBE_PX, CUBE_PX, angle=20)
 
