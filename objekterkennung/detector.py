@@ -16,7 +16,7 @@ def detect_objects(field_image, settings):
     objects = []
     for color in settings.hue_ranges:
         mask = color_mask(field_image, color, settings)
-        for object_mask in split_touching(mask, settings.min_area_px):
+        for object_mask in split_touching(mask, settings.min_area_px, field_image):
             x, y = pixel_to_unit(*center_px(object_mask), settings.board)
             objects.append(DetectedObject(classify_shape(object_mask), color, x, y))
     # Sorted from top-left to bottom-right, so the console list is easy to compare with the field.

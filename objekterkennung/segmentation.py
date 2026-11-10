@@ -10,6 +10,16 @@ HUE_MAX = 180
 # largest distance to the border. 0.8 keeps one seed for a cuboid, but two for two
 # cubes that touch with an offset.
 SEED_RATIO = 0.8
+# Canny thresholds for the visible border between two touching blocks, e.g. two flush cubes.
+EDGE_LOW = 30
+EDGE_HIGH = 90
+# A seed found between the edges must be a real top face: at least 800 px and 40 px wide.
+# A visible side face is a thin strip and is not used as a seed of its own.
+EDGE_SEED_MIN_PX = 800
+EDGE_SEED_MIN_WIDTH_PX = 40
+# A visible side face is also darker than the top face: under the lamp it reaches only about
+# 60 % of the top's brightness, while two touching top faces are about equally bright.
+SIDE_FACE_BRIGHTNESS_MAX = 0.8
 
 
 def color_mask(field_image, color, settings):
@@ -42,21 +52,68 @@ def clean_mask(mask):
     return cv2.morphologyEx(opened, cv2.MORPH_CLOSE, kernel)
 
 
-def split_touching(mask, min_area_px):
+def split_touching(mask, min_area_px, field_image=None):
     """Splits a colour mask into one mask per object, also when objects touch.
 
-    Uses the watershed method: the distance transform finds the centre of
-    every object as a "hill", and watershed draws the border in the "valley"
-    between two hills. Areas smaller than min_area_px are dropped as noise.
+    First the visible edges of the field image cut the area into pieces: two
+    cubes lying flush show a dark line between them. If that gives fewer than
+    two seeds, the distance transform finds the centre of every object as a
+    "hill" instead. In both cases watershed draws the final border.
+    Areas smaller than min_area_px are dropped as noise.
     """
     count, labels = cv2.connectedComponents(mask)
+    edges = None if field_image is None else _edges(field_image)
     objects = []
     for label in range(1, count):
         part = np.where(labels == label, 255, 0).astype(np.uint8)
         if cv2.countNonZero(part) < min_area_px:
             continue
-        objects.extend(_split_one_part(fill_holes(part), min_area_px))
+        part = fill_holes(part)
+        seeds = None if edges is None else _edge_seeds(part, edges, field_image)
+        if seeds is not None and cv2.connectedComponents(seeds)[0] > 2:
+            objects.extend(_watershed(part, seeds, field_image, min_area_px))
+        else:
+            objects.extend(_split_one_part(part, min_area_px))
     return objects
+
+
+def _edges(field_image):
+    """Canny edges of the field, made 3 px wide so that a thin border line closes.
+
+    Every colour channel is searched on its own, because the orange ball and a
+    yellow cuboid are almost equally bright and differ only in the green channel.
+    """
+    blurred = cv2.GaussianBlur(field_image, (5, 5), 0)
+    edges = np.zeros(field_image.shape[:2], dtype=np.uint8)
+    for channel in cv2.split(blurred):
+        edges = cv2.bitwise_or(edges, cv2.Canny(channel, EDGE_LOW, EDGE_HIGH))
+    return cv2.dilate(edges, np.ones((3, 3), np.uint8))
+
+
+def _edge_seeds(part, edges, field_image):
+    """The top faces inside one area, found between the edges.
+
+    Only large, wide and bright pieces count: a side face is a thin or dark strip
+    and belongs to the top face next to it.
+    """
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (MORPH_KERNEL_PX, MORPH_KERNEL_PX))
+    inner = cv2.erode(cv2.bitwise_and(part, cv2.bitwise_not(edges)), kernel)
+    count, labels, stats, _ = cv2.connectedComponentsWithStats(inner)
+    brightness = cv2.cvtColor(field_image, cv2.COLOR_BGR2HSV)[:, :, 2]
+    candidates = []
+    for label in range(1, count):
+        if stats[label, cv2.CC_STAT_AREA] < EDGE_SEED_MIN_PX:
+            continue
+        piece = labels == label
+        (_, _), (width, height), _ = cv2.minAreaRect(cv2.findNonZero(piece.astype(np.uint8)))
+        if min(width, height) >= EDGE_SEED_MIN_WIDTH_PX:
+            candidates.append((piece, np.median(brightness[piece])))
+    seeds = np.zeros_like(part)
+    brightest = max((value for _, value in candidates), default=0)
+    for piece, value in candidates:
+        if value >= SIDE_FACE_BRIGHTNESS_MAX * brightest:
+            seeds[piece] = 255
+    return seeds
 
 
 def fill_holes(part):
@@ -78,10 +135,16 @@ def _split_one_part(part, min_area_px):
     seed_count, markers = cv2.connectedComponents(seeds)
     if seed_count <= 2:
         return [part]
+    return _watershed(part, seeds, cv2.cvtColor(part, cv2.COLOR_GRAY2BGR), min_area_px)
+
+
+def _watershed(part, seeds, image, min_area_px):
+    """Grows every seed until it meets its neighbour; returns one mask per seed."""
+    seed_count, markers = cv2.connectedComponents(seeds)
     # Marker 1 is the background, the seeds are 2, 3, ... and 0 means "still unknown".
     markers = markers + 1
     markers[(part == 255) & (seeds == 0)] = 0
-    cv2.watershed(cv2.cvtColor(part, cv2.COLOR_GRAY2BGR), markers)
+    cv2.watershed(image, markers)
     pieces = []
     for marker in range(2, seed_count + 1):
         piece = np.where(markers == marker, 255, 0).astype(np.uint8)

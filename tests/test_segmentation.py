@@ -9,6 +9,8 @@ from objekterkennung.segmentation import clean_mask, color_mask, split_touching
 FIELD_PX = 600
 WHITE = (255, 255, 255)
 RED = (40, 30, 210)
+DARK_RED = (25, 20, 130)
+SEAM = (20, 15, 90)
 BLUE = (200, 90, 30)
 SHADOW_GREY = (150, 150, 150)
 # Measured: the webcam makes the paper slightly blue, a shadow on it has hue 109, saturation 89.
@@ -98,6 +100,32 @@ def test_A5_two_touching_spheres_are_split():
     objects = split_touching(mask, MIN_AREA_PX)
 
     assert len(objects) == 2
+
+
+def test_A5_two_flush_cubes_are_split_at_the_visible_seam():
+    # Without an offset the outline is a plain 2:1 rectangle; only the dark seam shows two cubes.
+    settings = load_settings()
+    field = _empty_field()
+    cv2.rectangle(field, (100, 100), (180, 180), RED, -1)
+    cv2.rectangle(field, (182, 100), (262, 180), RED, -1)
+    cv2.line(field, (181, 100), (181, 180), SEAM, 2)
+
+    objects = split_touching(color_mask(field, "red", settings), MIN_AREA_PX, field)
+
+    assert len(objects) == 2
+
+
+def test_A5_darker_side_face_stays_with_its_cube():
+    # The camera sees one side face of the cube below the top face, darker and divided by an edge.
+    settings = load_settings()
+    field = _empty_field()
+    cv2.rectangle(field, (100, 100), (180, 180), RED, -1)
+    cv2.rectangle(field, (100, 183), (180, 240), DARK_RED, -1)
+    cv2.line(field, (100, 181), (180, 181), SEAM, 2)
+
+    objects = split_touching(color_mask(field, "red", settings), MIN_AREA_PX, field)
+
+    assert len(objects) == 1
 
 
 def test_A5_ball_with_reflection_stays_one_object():
