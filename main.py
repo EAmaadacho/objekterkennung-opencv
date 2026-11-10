@@ -12,7 +12,7 @@ from objekterkennung.camera import open_camera, read_frame
 from objekterkennung.config import load_settings
 from objekterkennung.detector import detect_objects
 from objekterkennung.display import compose_window, draw_markers, draw_objects
-from objekterkennung.recording import save_recording
+from objekterkennung.protocol import LabelProtocol
 from objekterkennung.smoothing import FrameSmoother
 from objekterkennung.tracker import ChangeTracker
 
@@ -21,7 +21,7 @@ QUIT_KEY = "q"
 LIST_KEY = " "
 SCREENSHOT_KEY = "s"
 CALIBRATION_KEY = "c"
-RECORDING_KEY = "a"
+PROTOCOL_KEY = "p"
 SCREENSHOT_FOLDER = Path("screenshots")
 
 
@@ -35,10 +35,9 @@ def main():
         settings = load_settings()
     tracker = ChangeTracker(settings.stable_frames, settings.move_threshold)
     smoother = FrameSmoother(settings.stable_frames)
-    field = None
-    objects = []
+    protocol = None
     homography = None
-    print("Start. Tasten: q = beenden, Leertaste = Objektliste, s = Bildschirmfoto, a = Aufnahme, c = Kalibrierung")
+    print("Start. Tasten: q = beenden, Leertaste = Objektliste, s = Bildschirmfoto, p = Protokoll an/aus, c = Kalibrierung")
     try:
         while True:
             frame = read_frame(capture)
@@ -46,13 +45,16 @@ def main():
             field_view = None
             if homography is not None:
                 field = straighten_field(frame, homography, settings.board)
+                raw_objects = detect_objects(field, settings)
                 # The smoothed objects keep their name when a single frame is unclear.
-                objects = smoother.update(detect_objects(field, settings))
+                objects = smoother.update(raw_objects)
                 for change in tracker.update(objects):
                     print(change.text())
                 field_view = draw_objects(field, objects, settings.board)
             window = compose_window(draw_markers(frame, find_markers(frame)), field_view)
             cv2.imshow(WINDOW_NAME, window)
+            if protocol is not None and field_view is not None:
+                protocol.add(raw_objects, objects, field, window)
             # waitKey(1) waits 1 ms for a key and lets the window redraw itself.
             key = cv2.waitKey(1) & 0xFF
             if key == ord(QUIT_KEY):
@@ -61,13 +63,15 @@ def main():
                 _print_object_list(tracker.current_objects())
             if key == ord(SCREENSHOT_KEY):
                 _save_screenshot(window)
-            if key == ord(RECORDING_KEY) and field is not None:
-                print(f"Aufnahme gespeichert: {save_recording(field, objects)}")
+            if key == ord(PROTOCOL_KEY):
+                protocol = _toggle_protocol(protocol)
             if key == ord(CALIBRATION_KEY):
                 run_calibration(capture)
                 # The new colour ranges are in config.json now, so they are read again.
                 settings = load_settings()
     finally:
+        if protocol is not None:
+            _toggle_protocol(protocol)
         capture.release()
         cv2.destroyAllWindows()
 
@@ -84,6 +88,17 @@ def _print_object_list(objects):
     print(f"--- {len(objects)} Objekte ---")
     for item in objects:
         print(item.label())
+
+
+def _toggle_protocol(protocol):
+    """Starts a new label protocol, or stops the running one and prints its summary."""
+    if protocol is None:
+        protocol = LabelProtocol()
+        print(f"Protokoll läuft: {protocol.folder} (p = stoppen)")
+        return protocol
+    print(protocol.close())
+    print(f"Protokoll gespeichert: {protocol.folder}")
+    return None
 
 
 def _save_screenshot(window):
