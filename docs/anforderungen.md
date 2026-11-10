@@ -4,7 +4,7 @@ Die Anforderungen stammen aus der Aufgabenstellung „PALG: Anwendung OpenCV“ 
 
 | Kennung | Anforderung | Umsetzung (Modul) | Tests |
 |---|---|---|---|
-| A1 | Die Form jedes Objekts wird erkannt: Würfel, Quader, Dreiecksprisma, Kugel. | `shapes.py`, `detector.py` | `test_shapes.py`, `test_detector.py` |
+| A1 | Die Form jedes Objekts wird erkannt: Würfel, Quader, Dreiecksprisma, Kugel. | `shapes.py`, `prism_pair.py`, `detector.py` | `test_shapes.py`, `test_prism_pair.py`, `test_detector.py` |
 | A2 | Die Farbe jedes Objekts wird erkannt: rot, gelb, grün, blau. | `segmentation.py`, `detector.py` | `test_segmentation.py`, `test_detector.py` |
 | A3 | Die Position wird im Einheitsquadrat (0,0)–(1,1) ausgegeben und ist mit dem aufgedruckten Raster überprüfbar. | `board.py`, `tools/make_board.py` | `test_board.py`, `test_config.py` |
 | A4 | Veränderungen (neu, entfernt, verschoben) werden automatisch erkannt und gemeldet. | `smoothing.py`, `tracker.py`, `hand.py` | `test_smoothing.py`, `test_tracker.py`, `test_hand.py` |
