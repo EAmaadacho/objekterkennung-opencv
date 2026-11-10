@@ -1,5 +1,5 @@
 {
-  "camera_index": 0,
+  "camera_index": 1,
   "board": {
     "field_mm": 180,
     "marker_mm": 30,
@@ -9,8 +9,8 @@
   "saturation_min": 80,
   "value_min": 60,
   "hue_ranges": {
-    "red": [[0, 10], [170, 180]],
-    "yellow": [[12, 35]],
+    "red": [[0, 3], [160, 180]],
+    "yellow": [[5, 40]],
     "green": [[40, 85]],
     "blue": [[95, 130]]
   },
