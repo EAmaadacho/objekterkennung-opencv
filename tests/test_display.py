@@ -3,7 +3,7 @@
 import numpy as np
 
 from objekterkennung.config import load_settings
-from objekterkennung.display import DOT_COLOR, compose_window, draw_markers, draw_notice, draw_objects
+from objekterkennung.display import DOT_COLOR, MAX_WINDOW_WIDTH, compose_window, draw_markers, draw_notice, draw_objects
 from objekterkennung.models import DetectedObject
 
 GREEN = (0, 255, 0)
@@ -16,6 +16,16 @@ def test_A6_window_shows_both_images_side_by_side():
     window = compose_window(camera_image, field_image)
 
     assert window.shape == (600, 800 + 600, 3)
+
+
+def test_A6_wide_camera_image_is_shrunk_so_the_window_fits_the_screen():
+    camera_image = np.full((1080, 1920, 3), 255, dtype=np.uint8)
+    field_image = np.zeros((640, 640, 3), dtype=np.uint8)
+
+    window = compose_window(camera_image, field_image)
+
+    assert window.shape == (640, MAX_WINDOW_WIDTH, 3)
+    assert window[0, 0].all() and not window[-1, 0].any()
 
 
 def test_A6_without_field_only_camera_image_with_text():

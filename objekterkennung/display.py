@@ -10,6 +10,8 @@ TEXT_COLOR = (0, 0, 255)
 MARKER_COLOR = (0, 255, 0)
 LABEL_COLOR = (0, 0, 0)
 DOT_COLOR = (255, 0, 255)
+# Wider windows do not fit on a laptop screen; the camera image is shrunk instead of the field.
+MAX_WINDOW_WIDTH = 1400
 # cv2.putText only knows ASCII letters, so umlauts are written out.
 ASCII_REPLACEMENTS = {"ä": "ae", "ö": "oe", "ü": "ue", "Ä": "Ae", "Ö": "Oe", "Ü": "Ue", "ß": "ss"}
 
@@ -26,21 +28,31 @@ def draw_markers(image, markers):
 
 
 def compose_window(camera_image, field_image):
-    """Puts both images next to each other, e.g. a 640 px high camera image and the 640 x 640 field with its margin.
+    """Puts both images next to each other: the camera image on the left, the straight field with its margin on the right.
 
+    The field keeps its full size so the labels stay readable. The camera image
+    gets the field's height, but at most the width that is left up to
+    MAX_WINDOW_WIDTH; if it is lower than the field, black is added below.
     Without a field (no homography yet) only the camera image is shown,
     with the text "Spielfeld nicht gefunden" in the top-left corner.
     """
     if field_image is None:
-        result = camera_image.copy()
+        result = _fit(camera_image, camera_image.shape[0], MAX_WINDOW_WIDTH)
         cv2.putText(result, NO_FIELD_TEXT, (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1.0, TEXT_COLOR, 2)
         return result
     height = field_image.shape[0]
-    scale = height / camera_image.shape[0]
-    width = round(camera_image.shape[1] * scale)
+    camera_scaled = _fit(camera_image, height, MAX_WINDOW_WIDTH - field_image.shape[1])
     # np.hstack needs two images of the same height.
-    camera_scaled = cv2.resize(camera_image, (width, height))
+    missing_rows = height - camera_scaled.shape[0]
+    camera_scaled = cv2.copyMakeBorder(camera_scaled, 0, missing_rows, 0, 0, cv2.BORDER_CONSTANT, value=0)
     return np.hstack([camera_scaled, field_image])
+
+
+def _fit(image, max_height, max_width):
+    """Scales an image so that it is at most max_height high and max_width wide, keeping its aspect ratio."""
+    scale = min(max_height / image.shape[0], max_width / image.shape[1])
+    size = (round(image.shape[1] * scale), round(image.shape[0] * scale))
+    return cv2.resize(image, size)
 
 
 def draw_objects(field_image, objects, board):
