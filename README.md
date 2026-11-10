@@ -41,6 +41,7 @@ Mit `main.py --calibrate` startet der Kalibriermodus: Mit Schiebereglern werden 
 | `q` | beenden |
 | `space` | aktuelle Objektliste in der Konsole ausgeben |
 | `s` | Bildschirmfoto in `screenshots/` speichern |
+| `a` | Aufnahme speichern: entzerrtes Feld ohne Beschriftung und erkannte Objekte in `aufnahmen/` |
 | `c` | Kalibriermodus öffnen |
 
 ## Tests
@@ -53,7 +54,7 @@ Die Tests brauchen keine Kamera; sie arbeiten mit Bildern, die sie selbst zeichn
 |---|---|
 | `main.py` | Startpunkt: liest die Einstellungen, öffnet die Kamera und führt die Schleife pro Bild aus. |
 | `config.json` | Kamera, Spielfeldmaße, Farbbereiche (HSV) und Schwellwerte. |
-| [`objekterkennung/`](objekterkennung) | Der Code, ein Modul pro Aufgabe: `config` (Einstellungen), `camera` (Kamera), `board` (Marker finden, Feld entzerren), `segmentation` (Farbmasken, Trennen berührender Objekte), `shapes` (Form), `detector` (Farbe, Form und Position aller Objekte), `smoothing` (Glättung über mehrere Bilder), `tracker` (Veränderungen), `models` (Datenklassen), `display` (Anzeige), `calibration` (Kalibriermodus). |
+| [`objekterkennung/`](objekterkennung) | Der Code, ein Modul pro Aufgabe: `config` (Einstellungen), `camera` (Kamera), `board` (Marker finden, Feld entzerren), `segmentation` (Farbmasken, Trennen berührender Objekte), `shapes` (Form), `detector` (Farbe, Form und Position aller Objekte), `smoothing` (Glättung über mehrere Bilder), `tracker` (Veränderungen), `models` (Datenklassen), `display` (Anzeige), `calibration` (Kalibriermodus), `recording` (Aufnahmen echter Testbilder). |
 | [`tests/`](tests) | Automatische Tests mit pytest. |
 | [`tools/`](tools) | `make_board.py` erzeugt das Spielfeld-PDF aus den Maßen in `config.json`. |
 | [`assets/`](assets) | Das druckfertige Spielfeld. |

@@ -12,6 +12,7 @@ from objekterkennung.camera import open_camera, read_frame
 from objekterkennung.config import load_settings
 from objekterkennung.detector import detect_objects
 from objekterkennung.display import compose_window, draw_markers, draw_objects
+from objekterkennung.recording import save_recording
 from objekterkennung.smoothing import FrameSmoother
 from objekterkennung.tracker import ChangeTracker
 
@@ -20,6 +21,7 @@ QUIT_KEY = "q"
 LIST_KEY = " "
 SCREENSHOT_KEY = "s"
 CALIBRATION_KEY = "c"
+RECORDING_KEY = "a"
 SCREENSHOT_FOLDER = Path("screenshots")
 
 
@@ -33,8 +35,10 @@ def main():
         settings = load_settings()
     tracker = ChangeTracker(settings.stable_frames, settings.move_threshold)
     smoother = FrameSmoother(settings.stable_frames)
+    field = None
+    objects = []
     homography = None
-    print("Start. Tasten: q = beenden, Leertaste = Objektliste, s = Bildschirmfoto, c = Kalibrierung")
+    print("Start. Tasten: q = beenden, Leertaste = Objektliste, s = Bildschirmfoto, a = Aufnahme, c = Kalibrierung")
     try:
         while True:
             frame = read_frame(capture)
@@ -57,6 +61,8 @@ def main():
                 _print_object_list(tracker.current_objects())
             if key == ord(SCREENSHOT_KEY):
                 _save_screenshot(window)
+            if key == ord(RECORDING_KEY) and field is not None:
+                print(f"Aufnahme gespeichert: {save_recording(field, objects)}")
             if key == ord(CALIBRATION_KEY):
                 run_calibration(capture)
                 # The new colour ranges are in config.json now, so they are read again.

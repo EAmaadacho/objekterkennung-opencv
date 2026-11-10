@@ -17,4 +17,5 @@ Thumbs.db
 
 # Laufzeitdateien der Anwendung
 screenshots/
+aufnahmen/
 *.log
