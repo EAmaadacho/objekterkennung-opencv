@@ -1,4 +1,4 @@
-"""Shows what the webcam really delivers and opens its driver settings, e.g. to reset a digital zoom (A6).
+"""Shows what the webcam really delivers and lets you reset its zoom (A6).
 
 Start from the project folder: python tools/camera_check.py
 """
@@ -17,6 +17,9 @@ from objekterkennung.config import load_settings  # noqa: E402
 WINDOW_NAME = "Kamera-Check"
 QUIT_KEY = "q"
 SETTINGS_KEY = "e"
+ZOOM_OUT_KEY = "-"
+ZOOM_IN_KEY = "+"
+ZOOM_STEP = 10
 
 
 def main():
@@ -24,8 +27,9 @@ def main():
     capture = open_camera(settings.camera_index)
     width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    print(f"Kamera {settings.camera_index}: {width} x {height} Pixel, Zoom-Wert {capture.get(cv2.CAP_PROP_ZOOM)}")
-    print("Taste e = Kameraeinstellungen öffnen (dort Zoom ganz zurück, Autofokus an), q = beenden")
+    print(f"Kamera {settings.camera_index} ({capture.getBackendName()}): {width} x {height} Pixel")
+    _print_zoom(capture)
+    print("Tasten: - = rauszoomen, + = reinzoomen, e = Treibereinstellungen, q = beenden")
     try:
         while True:
             frame = read_frame(capture)
@@ -36,11 +40,21 @@ def main():
             if key == ord(QUIT_KEY):
                 break
             if key == ord(SETTINGS_KEY):
-                # Opens the Windows driver dialog of the camera; works with DirectShow.
-                capture.set(cv2.CAP_PROP_SETTINGS, 1)
+                # Opens the driver dialog of the camera; only DirectShow supports it.
+                if not capture.set(cv2.CAP_PROP_SETTINGS, 1):
+                    print("Treibereinstellungen werden von diesem Treiber nicht unterstuetzt.")
+            if key in (ord(ZOOM_OUT_KEY), ord(ZOOM_IN_KEY)):
+                step = -ZOOM_STEP if key == ord(ZOOM_OUT_KEY) else ZOOM_STEP
+                capture.set(cv2.CAP_PROP_ZOOM, capture.get(cv2.CAP_PROP_ZOOM) + step)
+                _print_zoom(capture)
     finally:
         capture.release()
         cv2.destroyAllWindows()
+
+
+def _print_zoom(capture):
+    """Prints the current zoom; -1 or 0 means the driver does not report it."""
+    print(f"Zoom-Wert: {capture.get(cv2.CAP_PROP_ZOOM)}")
 
 
 if __name__ == "__main__":

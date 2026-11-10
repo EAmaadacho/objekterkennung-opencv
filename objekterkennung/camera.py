@@ -23,9 +23,16 @@ def open_camera(index):
     Index 0 is usually the built-in laptop camera, so the USB webcam is often
     index 1. The index is set in config.json ("camera_index").
     """
-    # On Windows DirectShow handles the Full HD request more reliably than the default driver.
-    backend = cv2.CAP_DSHOW if sys.platform == "win32" else cv2.CAP_ANY
-    capture = cv2.VideoCapture(index, backend)
+    # On Windows DirectShow handles the Full HD request more reliably and can show the
+    # driver settings. Not every OpenCV build supports it, so the default driver is the fallback.
+    capture = None
+    if sys.platform == "win32":
+        capture = cv2.VideoCapture(index, cv2.CAP_DSHOW)
+        if not capture.isOpened():
+            capture.release()
+            capture = None
+    if capture is None:
+        capture = cv2.VideoCapture(index)
     if not capture.isOpened():
         capture.release()
         raise CameraError(
