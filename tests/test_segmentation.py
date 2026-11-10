@@ -11,6 +11,8 @@ WHITE = (255, 255, 255)
 RED = (40, 30, 210)
 BLUE = (200, 90, 30)
 SHADOW_GREY = (150, 150, 150)
+# Measured on the real objects: the ball has hue 16 (orange-yellow), the red blocks hue 0.
+YELLOW_BALL = (38, 149, 245)
 MIN_AREA_PX = 400
 
 
@@ -93,6 +95,18 @@ def test_A5_tiny_specks_are_dropped():
     objects = split_touching(mask, MIN_AREA_PX)
 
     assert objects == []
+
+
+def test_A2_orange_tinted_ball_counts_as_yellow_not_red():
+    settings = load_settings()
+    field = _empty_field()
+    cv2.circle(field, (300, 300), 70, YELLOW_BALL, -1)
+
+    yellow = color_mask(field, "yellow", settings)
+    red = color_mask(field, "red", settings)
+
+    assert yellow[300, 300] == 255
+    assert not red.any()
 
 
 def _empty_field():
