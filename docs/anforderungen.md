@@ -22,7 +22,7 @@ Die Anforderungen stammen aus der Aufgabenstellung „PALG: Anwendung OpenCV“ 
 | 1 | grüner Quader |
 | 2 | blaue Dreiecksprismen |
 | 1 | rotes Dreiecksprisma |
-| 1 | gelbe Kugel |
+| 1 | rote Kugel |
 | 1 | grüne Kugel |
 
 12 Objekte: 4 Formen, 4 Farben, jede Form in mindestens 2 Farben, 4 Objekte doppelt, alle einfarbig und dreidimensional. Die Dreiecksprismen liegen auf ihrer Dreiecksfläche, damit sie von oben als Dreieck zu sehen sind.
