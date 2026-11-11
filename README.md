@@ -48,6 +48,30 @@ Mit `main.py --calibrate` startet der Kalibriermodus: Mit Schiebereglern werden 
 
 Die Tests brauchen keine Kamera; sie arbeiten mit Bildern, die sie selbst zeichnen. Unter Windows `.venv\Scripts\python -m pytest`, unter macOS oder Linux `.venv/bin/python -m pytest`. Bei jedem Push auf `main` laufen sie auch auf GitHub.
 
+## Verfahren und Bezug zum Vorlesungsskript
+
+Wo es geht, nutzt das Programm die Verfahren aus dem Vorlesungsskript. Abgewichen wird nur dort, wo das Skript-Verfahren für diese Aufgabe nachweislich nicht ausreicht.
+
+| Schritt | Verfahren | Skript |
+|---|---|---|
+| Bild holen, anzeigen | `VideoCapture`, `imshow`, `waitKey`, `np.hstack` | Kap. 1/2 |
+| Farbe | `cvtColor` nach HSV, `inRange` | Kap. 2.2 |
+| Maske säubern | Öffnen/Schließen (`morphologyEx`), Löcher füllen mit `findContours`/`drawContours` | Kap. 5.2, 6.1 |
+| Kante zwischen Klötzen | `GaussianBlur`, `Canny`, `erode`/`dilate` | Kap. 4.1, 4.2, 5.1 |
+| Flächen, Form, Position | `findContours`, `contourArea`, `minEnclosingCircle`, `moments`, `boundingRect` | Kap. 6.1 |
+| Zwei Prismen als Quadrat | Ausschnitt (ROI), `getRotationMatrix2D`, `warpAffine`, Helligkeitsprofil | Kap. 3.2, 3.3 |
+| Kalibrierung | Schieberegler (`createTrackbar`) | Kap. 4.3.4 |
+
+Abweichungen und ihr Grund:
+
+| Verfahren | Warum nicht mit Skript-Mitteln |
+|---|---|
+| ArUco-Marker, `findHomography`, `warpPerspective` | Die Kamera schaut leicht schräg auf das Feld. Das Skript kennt nur `warpAffine` (Drehen, Verschieben), das eine schräge Ansicht nicht gerade rücken kann. |
+| `distanceTransform`, `watershed` | Zwei gleichfarbige Würfel, die bündig aneinander liegen, bilden eine einzige Fläche. Erodieren allein trennt sie nicht. |
+| `convexHull`, `minAreaRect` in der Formregel | Die Ecken-Zählung aus Übung 11 (`approxPolyDP`) stimmte auf 1 140 Objekten aus echten Aufnahmen nur zu 62 %, weil die Klötze Seitenflächen und runde Kanten zeigen. |
+| `HoughCircles` | Eine Kugel, die an einem gleichfarbigen Quader liegt, verschmilzt mit ihm. Nur ihr runder Umriss trennt sie, denn Würfel mit Seitenflächen sind im Bild genauso dick wie die Kugel. |
+| Kameraeinstellungen (`CAP_DSHOW`, MJPG, Full HD) | Ohne sie liefert die Webcam nur einen gezoomten Ausschnitt in 640 × 480. |
+
 ## Aufbau des Repositorys
 
 | Ordner / Datei | Inhalt |
