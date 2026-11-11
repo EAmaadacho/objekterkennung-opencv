@@ -120,3 +120,14 @@ def _rotated_box(width, height, angle):
     corners = cv2.boxPoints(((300, 300), (width, height), angle)).astype(np.int32)
     cv2.fillPoly(mask, [corners], 255)
     return mask
+
+
+def test_A1_cube_seen_at_a_slant_is_not_a_sphere():
+    mask = np.zeros((600, 600), dtype=np.uint8)
+    # Top face and two visible side faces together look like a hexagon.
+    hexagon = np.array([(250, 230), (330, 230), (360, 270), (360, 350), (280, 350), (250, 310)], np.int32)
+    cv2.fillPoly(mask, [hexagon], 255)
+
+    shape = classify_shape(mask)
+
+    assert shape != "sphere"

@@ -9,8 +9,10 @@ import cv2
 # because shading and bevelled edges make real objects a bit worse than the ideal.
 BOX_FILL_MIN = 0.75
 # How much of its smallest surrounding circle a shape fills:
-# circle 1.0, square 0.64, cuboid 0.51, triangle at most 0.41.
-CIRCLE_FILL_MIN = 0.80
+# circle 1.0, square 0.64, cuboid 0.51, triangle at most 0.41. A cube seen at a slant
+# shows side faces and looks like a hexagon (up to 0.83). In the test recordings real
+# balls filled 0.91 to 0.99 and cubes at most 0.81, so the limit lies in between.
+CIRCLE_FILL_MIN = 0.86
 # A cube is about 1:1 from above, a cuboid about 2:1.
 CUBOID_ASPECT_MIN = 1.5
 
