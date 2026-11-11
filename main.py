@@ -1,6 +1,7 @@
 """Starts the program: reads the webcam, finds the field, detects the objects and reports changes (A4, A6)."""
 
 import argparse
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -8,7 +9,7 @@ import cv2
 
 from objekterkennung.board import find_homography, find_markers, straighten_field
 from objekterkennung.calibration import run_calibration
-from objekterkennung.camera import open_camera, read_frame
+from objekterkennung.camera import CameraError, open_camera, read_frame
 from objekterkennung.config import load_settings
 from objekterkennung.detector import detect_objects
 from objekterkennung.display import compose_window, draw_markers, draw_notice, draw_objects
@@ -28,8 +29,20 @@ SCREENSHOT_FOLDER = Path("screenshots")
 
 
 def main():
-    """Runs the camera loop until the q key is pressed."""
+    """Starts the program and ends it with a short message instead of a traceback if the camera fails."""
     arguments = _parse_arguments()
+    try:
+        _run(arguments)
+    except CameraError as error:
+        print(f"Fehler: {error}")
+        sys.exit(1)
+    except KeyboardInterrupt:
+        # Ctrl+C in the terminal: the protocol is already saved by the finally block in _run.
+        print("Beendet mit Strg+C.")
+
+
+def _run(arguments):
+    """Runs the camera loop until the q key is pressed."""
     settings = load_settings()
     capture = open_camera(settings.camera_index)
     if arguments.calibrate:

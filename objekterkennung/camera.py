@@ -36,8 +36,8 @@ def open_camera(index):
     if not capture.isOpened():
         capture.release()
         raise CameraError(
-            f"No camera found at index {index}. "
-            'Check the USB cable or change "camera_index" in config.json.'
+            f"Keine Kamera mit Index {index} gefunden. "
+            'USB-Kabel prüfen oder "camera_index" in config.json ändern.'
         )
     # MJPG is the compressed format in which USB webcams deliver Full HD fast enough.
     capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
@@ -55,6 +55,6 @@ def read_frame(capture):
             return frame
     # read() keeps failing when the cable is pulled or another app took the camera.
     raise CameraError(
-        "The camera stopped delivering images. Check the cable and close other apps "
-        "that use the camera, e.g. Teams or the camera settings."
+        "Die Kamera liefert keine Bilder mehr. Kabel prüfen und andere Programme schließen, "
+        "die die Kamera benutzen, z. B. Teams oder die Kamera-App."
     )
