@@ -3,7 +3,7 @@
 import cv2
 import numpy as np
 
-from objekterkennung.ball import cut_ball
+from objekterkennung.ball import OUTLINE_MATCH_MIN, OUTLINE_TOLERANCE_PX, cut_ball, outline_match, refine_circle
 from objekterkennung.segmentation import split_touching
 from objekterkennung.shapes import classify_shape
 
@@ -30,3 +30,15 @@ def test_A1_cube_alone_has_no_ball():
 
     assert ball is None
     assert (rest == mask).all()
+
+
+def test_A5_roughly_found_circle_is_moved_onto_the_ball():
+    mask = np.zeros((FIELD_PX, FIELD_PX), dtype=np.uint8)
+    cv2.rectangle(mask, (100, 150), (183, 316), 255, -1)
+    cv2.circle(mask, (250, 300), BALL_RADIUS_PX, 255, -1)
+
+    x, y, radius = refine_circle(mask, 256, 294, BALL_RADIUS_PX - 6)
+
+    assert outline_match(mask, 256, 294, BALL_RADIUS_PX - 6) < OUTLINE_MATCH_MIN
+    assert outline_match(mask, x, y, radius) >= OUTLINE_MATCH_MIN
+    assert abs(x - 250) <= OUTLINE_TOLERANCE_PX and abs(y - 300) <= OUTLINE_TOLERANCE_PX

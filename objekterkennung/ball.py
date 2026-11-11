@@ -15,6 +15,10 @@ OUTLINE_MATCH_MIN = 0.6
 OUTLINE_TOLERANCE_PX = 4
 # Pixels around the ball that are given to neither object, so no thin seam is left over.
 CUT_MARGIN_PX = 4
+# HoughCircles only finds the circle roughly. Centre and radius are then moved step by
+# step to where the outline fits best.
+REFINE_GRID_PX = 6
+REFINE_GRID_STEP_PX = 3
 ANGLES = np.linspace(0, 2 * np.pi, 360, endpoint=False)
 
 
@@ -33,6 +37,8 @@ def cut_ball(part):
     if circles is None:
         return None, part
     for x, y, radius in circles[0]:
+        if outline_match(part, x, y, radius) < OUTLINE_MATCH_MIN:
+            x, y, radius = refine_circle(part, x, y, radius)
         if outline_match(part, x, y, radius) >= OUTLINE_MATCH_MIN:
             disc = np.zeros_like(part)
             cv2.circle(disc, (round(x), round(y)), round(radius), 255, -1)
@@ -41,6 +47,27 @@ def cut_ball(part):
             rest = cv2.bitwise_and(part, 255 - disc)
             return ball, rest
     return None, part
+
+
+def refine_circle(part, x, y, radius):
+    """Moves centre and radius to where the outline follows the circle best.
+
+    First a coarse grid in steps of REFINE_GRID_STEP_PX, then 1 px steps from the
+    best grid point for as long as the match still gets better.
+    """
+    grid = range(-REFINE_GRID_PX, REFINE_GRID_PX + 1, REFINE_GRID_STEP_PX)
+    best = max(
+        (outline_match(part, x + dx, y + dy, radius + dr), x + dx, y + dy, radius + dr)
+        for dx in grid for dy in grid for dr in grid
+    )
+    while True:
+        match, bx, by, br = best
+        neighbours = [(bx + 1, by, br), (bx - 1, by, br), (bx, by + 1, br),
+                      (bx, by - 1, br), (bx, by, br + 1), (bx, by, br - 1)]
+        better = max((outline_match(part, *c), *c) for c in neighbours)
+        if better[0] <= match:
+            return bx, by, br
+        best = better
 
 
 def outline_match(part, x, y, radius):
