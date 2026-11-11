@@ -3,6 +3,7 @@
 import cv2
 import numpy as np
 
+from objekterkennung.segmentation import outline_points
 from objekterkennung.shapes import classify_shape
 
 # The joint between the two prisms runs along a diagonal of the square, i.e. about
@@ -48,7 +49,7 @@ def find_joint(object_mask, field_image):
     if moments["m00"] == 0:
         return None
     center = (moments["m10"] / moments["m00"], moments["m01"] / moments["m00"])
-    _, _, side_angle = cv2.minAreaRect(cv2.findNonZero(object_mask))
+    _, _, side_angle = cv2.minAreaRect(outline_points(object_mask))
     best = None
     for diagonal in (45, 135):
         for delta in DIAGONAL_ANGLES:

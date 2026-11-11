@@ -30,7 +30,7 @@ def hand_in_field(field_image, settings):
     skin_or_dark = (warm & (saturation >= SKIN_SATURATION_MIN) & (value >= SKIN_VALUE_MIN)) | (value < DARK_VALUE_MAX)
     known = np.zeros(hue.shape, dtype=np.uint8)
     for color in settings.hue_ranges:
-        known = cv2.bitwise_or(known, color_mask(field_image, color, settings))
+        known = known | color_mask(field_image, color, settings)
     known = cv2.dilate(known, np.ones((KNOWN_MARGIN_PX, KNOWN_MARGIN_PX), np.uint8))
     rest = np.where(skin_or_dark & (known == 0), 255, 0).astype(np.uint8)
     rest = cv2.morphologyEx(rest, cv2.MORPH_OPEN, np.ones((7, 7), np.uint8))

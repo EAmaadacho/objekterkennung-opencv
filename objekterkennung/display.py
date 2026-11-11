@@ -21,7 +21,7 @@ def draw_markers(image, markers):
     result = image.copy()
     for marker_id, corners in markers.items():
         points = corners.astype(np.int32)
-        cv2.polylines(result, [points], isClosed=True, color=MARKER_COLOR, thickness=2)
+        cv2.drawContours(result, [points], -1, MARKER_COLOR, 2)
         top_left = (int(points[0][0]), int(points[0][1]) - 8)
         cv2.putText(result, str(marker_id), top_left, cv2.FONT_HERSHEY_SIMPLEX, 0.8, MARKER_COLOR, 2)
     return result
@@ -43,9 +43,9 @@ def compose_window(camera_image, field_image):
     height = field_image.shape[0]
     camera_scaled = _fit(camera_image, height, MAX_WINDOW_WIDTH - field_image.shape[1])
     # np.hstack needs two images of the same height.
-    missing_rows = height - camera_scaled.shape[0]
-    camera_scaled = cv2.copyMakeBorder(camera_scaled, 0, missing_rows, 0, 0, cv2.BORDER_CONSTANT, value=0)
-    return np.hstack([camera_scaled, field_image])
+    padded = np.zeros((height, camera_scaled.shape[1], 3), dtype=np.uint8)
+    padded[: camera_scaled.shape[0]] = camera_scaled
+    return np.hstack([padded, field_image])
 
 
 def _fit(image, max_height, max_width):

@@ -38,7 +38,7 @@ def cut_ball(part):
             cv2.circle(disc, (round(x), round(y)), round(radius), 255, -1)
             ball = cv2.bitwise_and(part, disc)
             cv2.circle(disc, (round(x), round(y)), round(radius) + CUT_MARGIN_PX, 255, -1)
-            rest = cv2.bitwise_and(part, cv2.bitwise_not(disc))
+            rest = cv2.bitwise_and(part, 255 - disc)
             return ball, rest
     return None, part
 

@@ -39,7 +39,8 @@ def color_mask(field_image, color, settings):
     for hue_low, hue_high in settings.hue_ranges[color]:
         lower = (hue_low, settings.saturation_min[color], settings.value_min)
         upper = (min(hue_high, HUE_MAX), 255, 255)
-        mask = cv2.bitwise_or(mask, cv2.inRange(hsv, lower, upper))
+        # An image is a numpy array, so | joins two masks pixel by pixel (white where either is white).
+        mask = mask | cv2.inRange(hsv, lower, upper)
     return clean_mask(mask)
 
 
@@ -68,7 +69,7 @@ def split_touching(mask, min_area_px, field_image=None):
     edges = None if field_image is None else _edges(field_image)
     objects = []
     for part in areas(mask):
-        if cv2.countNonZero(part) < min_area_px:
+        if np.count_nonzero(part) < min_area_px:
             continue
         part = fill_holes(part)
         ball, rest = cut_ball(part)
@@ -94,7 +95,7 @@ def _edges(field_image):
     blurred = cv2.GaussianBlur(field_image, (5, 5), 0)
     edges = np.zeros(field_image.shape[:2], dtype=np.uint8)
     for channel in cv2.split(blurred):
-        edges = cv2.bitwise_or(edges, cv2.Canny(channel, EDGE_LOW, EDGE_HIGH))
+        edges = edges | cv2.Canny(channel, EDGE_LOW, EDGE_HIGH)
     return cv2.dilate(edges, np.ones((3, 3), np.uint8))
 
 
@@ -105,14 +106,14 @@ def _edge_seeds(part, edges, field_image):
     and belongs to the top face next to it.
     """
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (MORPH_KERNEL_PX, MORPH_KERNEL_PX))
-    inner = cv2.erode(cv2.bitwise_and(part, cv2.bitwise_not(edges)), kernel)
+    inner = cv2.erode(cv2.bitwise_and(part, 255 - edges), kernel)
     brightness = cv2.cvtColor(field_image, cv2.COLOR_BGR2HSV)[:, :, 2]
     candidates = []
     for piece_mask in areas(inner):
-        if cv2.countNonZero(piece_mask) < EDGE_SEED_MIN_PX:
+        if np.count_nonzero(piece_mask) < EDGE_SEED_MIN_PX:
             continue
         piece = piece_mask > 0
-        (_, _), (width, height), _ = cv2.minAreaRect(cv2.findNonZero(piece_mask))
+        (_, _), (width, height), _ = cv2.minAreaRect(outline_points(piece_mask))
         if min(width, height) >= EDGE_SEED_MIN_WIDTH_PX:
             candidates.append((piece, np.median(brightness[piece])))
     seeds = np.zeros_like(part)
@@ -136,6 +137,15 @@ def areas(mask):
         cv2.drawContours(filled, [contour], -1, 255, thickness=cv2.FILLED)
         result.append(cv2.bitwise_and(filled, mask))
     return result
+
+
+def outline_points(mask):
+    """All points on the outer contours of a mask, e.g. as input for cv2.minAreaRect.
+
+    The smallest rectangle around these points is the same as around all white pixels.
+    """
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    return np.vstack(contours)
 
 
 def fill_holes(part):
@@ -171,6 +181,6 @@ def _watershed(part, seeds, image, min_area_px):
     pieces = []
     for marker in range(2, len(seed_masks) + 2):
         piece = np.where(markers == marker, 255, 0).astype(np.uint8)
-        if cv2.countNonZero(piece) >= min_area_px:
+        if np.count_nonzero(piece) >= min_area_px:
             pieces.append(piece)
     return pieces
