@@ -65,11 +65,9 @@ def split_touching(mask, min_area_px, field_image=None):
     "hill" instead. In both cases watershed draws the final border.
     Areas smaller than min_area_px are dropped as noise.
     """
-    count, labels = cv2.connectedComponents(mask)
     edges = None if field_image is None else _edges(field_image)
     objects = []
-    for label in range(1, count):
-        part = np.where(labels == label, 255, 0).astype(np.uint8)
+    for part in areas(mask):
         if cv2.countNonZero(part) < min_area_px:
             continue
         part = fill_holes(part)
@@ -80,7 +78,7 @@ def split_touching(mask, min_area_px, field_image=None):
             objects.extend(split_touching(clean_mask(rest), min_area_px, field_image))
             continue
         seeds = None if edges is None else _edge_seeds(part, edges, field_image)
-        if seeds is not None and cv2.connectedComponents(seeds)[0] > 2:
+        if seeds is not None and len(areas(seeds)) >= 2:
             objects.extend(_watershed(part, seeds, field_image, min_area_px))
         else:
             objects.extend(_split_one_part(part, min_area_px))
@@ -108,14 +106,13 @@ def _edge_seeds(part, edges, field_image):
     """
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (MORPH_KERNEL_PX, MORPH_KERNEL_PX))
     inner = cv2.erode(cv2.bitwise_and(part, cv2.bitwise_not(edges)), kernel)
-    count, labels, stats, _ = cv2.connectedComponentsWithStats(inner)
     brightness = cv2.cvtColor(field_image, cv2.COLOR_BGR2HSV)[:, :, 2]
     candidates = []
-    for label in range(1, count):
-        if stats[label, cv2.CC_STAT_AREA] < EDGE_SEED_MIN_PX:
+    for piece_mask in areas(inner):
+        if cv2.countNonZero(piece_mask) < EDGE_SEED_MIN_PX:
             continue
-        piece = labels == label
-        (_, _), (width, height), _ = cv2.minAreaRect(cv2.findNonZero(piece.astype(np.uint8)))
+        piece = piece_mask > 0
+        (_, _), (width, height), _ = cv2.minAreaRect(cv2.findNonZero(piece_mask))
         if min(width, height) >= EDGE_SEED_MIN_WIDTH_PX:
             candidates.append((piece, np.median(brightness[piece])))
     seeds = np.zeros_like(part)
@@ -124,6 +121,21 @@ def _edge_seeds(part, edges, field_image):
         if value >= SIDE_FACE_BRIGHTNESS_MAX * brightest:
             seeds[piece] = 255
     return seeds
+
+
+def areas(mask):
+    """One mask per connected white area, found as outer contours (cv2.findContours).
+
+    Each contour is filled and cut with the original mask again, so holes of
+    the area stay holes.
+    """
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    result = []
+    for contour in contours:
+        filled = np.zeros_like(mask)
+        cv2.drawContours(filled, [contour], -1, 255, thickness=cv2.FILLED)
+        result.append(cv2.bitwise_and(filled, mask))
+    return result
 
 
 def fill_holes(part):
@@ -142,21 +154,22 @@ def _split_one_part(part, min_area_px):
     """Watershed on one connected area; returns one mask per found object."""
     distance = cv2.distanceTransform(part, cv2.DIST_L2, 5)
     seeds = np.where(distance >= SEED_RATIO * distance.max(), 255, 0).astype(np.uint8)
-    seed_count, markers = cv2.connectedComponents(seeds)
-    if seed_count <= 2:
+    if len(areas(seeds)) < 2:
         return [part]
     return _watershed(part, seeds, cv2.cvtColor(part, cv2.COLOR_GRAY2BGR), min_area_px)
 
 
 def _watershed(part, seeds, image, min_area_px):
     """Grows every seed until it meets its neighbour; returns one mask per seed."""
-    seed_count, markers = cv2.connectedComponents(seeds)
     # Marker 1 is the background, the seeds are 2, 3, ... and 0 means "still unknown".
-    markers = markers + 1
-    markers[(part == 255) & (seeds == 0)] = 0
+    markers = np.ones(part.shape, dtype=np.int32)
+    markers[part == 255] = 0
+    seed_masks = areas(seeds)
+    for number, seed in enumerate(seed_masks, start=2):
+        markers[seed == 255] = number
     cv2.watershed(image, markers)
     pieces = []
-    for marker in range(2, seed_count + 1):
+    for marker in range(2, len(seed_masks) + 2):
         piece = np.where(markers == marker, 255, 0).astype(np.uint8)
         if cv2.countNonZero(piece) >= min_area_px:
             pieces.append(piece)

@@ -34,10 +34,11 @@ def hand_in_field(field_image, settings):
     known = cv2.dilate(known, np.ones((KNOWN_MARGIN_PX, KNOWN_MARGIN_PX), np.uint8))
     rest = np.where(skin_or_dark & (known == 0), 255, 0).astype(np.uint8)
     rest = cv2.morphologyEx(rest, cv2.MORPH_OPEN, np.ones((7, 7), np.uint8))
-    count, _, stats, _ = cv2.connectedComponentsWithStats(rest)
+    contours, _ = cv2.findContours(rest, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     height, width = rest.shape
-    for label in range(1, count):
-        left, top, box_width, box_height, area = stats[label]
+    for contour in contours:
+        left, top, box_width, box_height = cv2.boundingRect(contour)
+        area = cv2.contourArea(contour)
         touches_border = (
             left <= BORDER_PX
             or top <= BORDER_PX
