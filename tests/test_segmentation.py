@@ -13,8 +13,9 @@ DARK_RED = (25, 20, 130)
 SEAM = (20, 15, 90)
 BLUE = (200, 90, 30)
 SHADOW_GREY = (150, 150, 150)
-# Measured: the webcam makes the paper slightly blue, a shadow on it has hue 109, saturation 89.
-SHADOW_BLUISH = (150, 120, 98)
+# Measured with the ring light above the field: paper and shadows have hue 100-130 and
+# a saturation of at most about 30; this test shadow has hue 107, saturation 44.
+SHADOW_BLUISH = (150, 135, 124)
 # Measured on the real objects: the ball has hue 16 (orange-yellow), the red blocks hue 0.
 YELLOW_BALL = (38, 149, 245)
 MIN_AREA_PX = 400

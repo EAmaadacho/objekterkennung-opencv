@@ -7,10 +7,10 @@
     "warp_px": 600
   },
   "saturation_min": {
-    "red": 120,
+    "red": 110,
     "yellow": 80,
-    "green": 80,
-    "blue": 140
+    "green": 60,
+    "blue": 60
   },
   "value_min": 60,
   "hue_ranges": {

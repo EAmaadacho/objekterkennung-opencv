@@ -30,8 +30,9 @@ def color_mask(field_image, color, settings):
     The image is converted to HSV first, because there the colour (hue) is one
     number, e.g. about 120 for blue, no matter how bright the light is. White
     paper and grey shadows have almost no saturation, so saturation_min removes them.
-    It is set per colour: the webcam makes the paper slightly blue, so shadows on it
-    are pale blue, and blue needs a higher limit than the other colours.
+    It is set per colour in config.json, because it depends on the light: strong light
+    makes the tops of the blocks paler, and skin is close to red, so red needs a higher
+    limit than the other colours.
     """
     hsv = cv2.cvtColor(field_image, cv2.COLOR_BGR2HSV)
     mask = np.zeros(hsv.shape[:2], dtype=np.uint8)
