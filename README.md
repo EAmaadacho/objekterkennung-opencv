@@ -36,6 +36,8 @@ Mit `main.py --calibrate` startet der Kalibriermodus: Mit Schiebereglern werden 
 
 ## Bedienung
 
+Über dem Bild liegt eine Statusleiste mit Buttons für die Maus. Rot heißt: Das Protokoll läuft, orange heißt: Pause. Jeder Button hat auch eine Taste:
+
 | Taste | Wirkung |
 |---|---|
 | `q` | beenden |
@@ -71,6 +73,7 @@ Abweichungen und ihr Grund:
 | `distanceTransform`, `watershed` | Zwei gleichfarbige Würfel, die bündig aneinander liegen, bilden eine einzige Fläche. Erodieren allein trennt sie nicht. |
 | `convexHull`, `minAreaRect` in der Formregel | Die Ecken-Zählung aus Übung 11 (`approxPolyDP`) stimmte auf 1 140 Objekten aus echten Aufnahmen nur zu 62 %, weil die Klötze Seitenflächen und runde Kanten zeigen. |
 | `HoughCircles` | Eine Kugel, die an einem gleichfarbigen Quader liegt, verschmilzt mit ihm. Nur ihr runder Umriss trennt sie, denn Würfel mit Seitenflächen sind im Bild genauso dick wie die Kugel. |
+| `setMouseCallback` für die Buttons in der Statusleiste | Das Skript kennt als Bedienung nur Tasten (`waitKey`) und Schieberegler. Die Buttons sind zusätzlich zu den Tasten da, damit man während der Vorführung mit der Maus pausieren und das Protokoll starten kann; jede Funktion bleibt auch über ihre Taste erreichbar. |
 | Kameraeinstellungen (`CAP_DSHOW`, MJPG, Full HD) | Ohne sie liefert die Webcam nur einen gezoomten Ausschnitt in 640 × 480. |
 
 ## Aufbau des Repositorys

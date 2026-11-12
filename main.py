@@ -12,7 +12,7 @@ from objekterkennung.calibration import run_calibration
 from objekterkennung.camera import CameraError, open_camera, read_frame
 from objekterkennung.config import load_settings
 from objekterkennung.detector import detect_objects
-from objekterkennung.display import add_status_bar, compose_window, draw_markers, draw_notice, draw_objects
+from objekterkennung.display import add_status_bar, button_at, compose_window, draw_markers, draw_notice, draw_objects
 from objekterkennung.hand import hand_in_field
 from objekterkennung.protocol import LabelProtocol
 from objekterkennung.smoothing import FrameSmoother
@@ -28,6 +28,7 @@ PAUSE_KEY = "u"
 PAUSE_TEXT = "PAUSE zum Umbauen - u = weiter"
 PROTOCOL_KEY = "p"
 SCREENSHOT_FOLDER = Path("screenshots")
+BUTTON_KEYS = {"protocol": PROTOCOL_KEY, "pause": PAUSE_KEY, "photo": SCREENSHOT_KEY, "list": LIST_KEY, "quit": QUIT_KEY}
 
 
 def main():
@@ -56,6 +57,10 @@ def _run(arguments):
     homography = None
     objects = []
     paused = False
+    clicks = []
+    cv2.namedWindow(WINDOW_NAME)
+    # OpenCV calls this function for every mouse event in the window; a left click is kept for the loop.
+    cv2.setMouseCallback(WINDOW_NAME, lambda event, x, y, flags, param: _remember_click(event, x, y, clicks))
     print("Start. Tasten: q = beenden, Leertaste = Objektliste, s = Bildschirmfoto, p = Protokoll an/aus, u = Pause zum Umbauen, c = Kalibrierung")
     try:
         while True:
@@ -87,6 +92,11 @@ def _run(arguments):
                 protocol.add(raw_objects, objects, field, window)
             # waitKey(1) waits 1 ms for a key and lets the window redraw itself.
             key = cv2.waitKey(1) & 0xFF
+            # A click on a button counts like its key.
+            if clicks:
+                name = button_at(*clicks.pop(0))
+                if name is not None:
+                    key = ord(BUTTON_KEYS[name])
             if key == ord(QUIT_KEY):
                 break
             if key == ord(LIST_KEY):
@@ -121,6 +131,12 @@ def _print_object_list(objects):
     print(f"--- {len(objects)} Objekte ---")
     for item in objects:
         print(item.label())
+
+
+def _remember_click(event, x, y, clicks):
+    """Keeps the position of a left mouse click, e.g. on the pause button."""
+    if event == cv2.EVENT_LBUTTONDOWN:
+        clicks.append((x, y))
 
 
 def _toggle_protocol(protocol):

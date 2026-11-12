@@ -11,6 +11,7 @@ from objekterkennung.display import (
     STATUS_ON_COLOR,
     STATUS_PAUSE_COLOR,
     add_status_bar,
+    button_at,
     compose_window,
     draw_markers,
     draw_notice,
@@ -104,3 +105,11 @@ def test_A4_status_bar_is_grey_when_protocol_is_off_and_no_pause():
     assert not _has_color(bar, STATUS_ON_COLOR)
     assert not _has_color(bar, STATUS_PAUSE_COLOR)
     assert _has_color(bar, STATUS_OFF_COLOR)
+
+
+def test_A4_click_on_a_button_gives_its_name():
+    pause_x = 300
+
+    names = [button_at(pause_x, 20), button_at(pause_x, STATUS_HEIGHT_PX + 50), button_at(1300, 20)]
+
+    assert names == ["pause", None, None]

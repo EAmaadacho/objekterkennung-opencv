@@ -12,14 +12,16 @@ LABEL_COLOR = (0, 0, 0)
 DOT_COLOR = (255, 0, 255)
 # Wider windows do not fit on a laptop screen; the camera image is shrunk instead of the field.
 MAX_WINDOW_WIDTH = 1400
-# Status bar above the window: protocol on/off, pause, and the keys.
+# Status bar above the window with buttons for the mouse; each button also has a key.
 STATUS_HEIGHT_PX = 40
 STATUS_BACKGROUND = (40, 40, 40)
 STATUS_TEXT_COLOR = (255, 255, 255)
-STATUS_ON_COLOR = (0, 0, 255)
-STATUS_PAUSE_COLOR = (0, 200, 255)
-STATUS_OFF_COLOR = (150, 150, 150)
-KEY_HELP = "p Protokoll | u Pause | Leertaste Liste | s Foto | c Kalibrieren | q Ende"
+STATUS_ON_COLOR = (0, 0, 220)
+STATUS_PAUSE_COLOR = (0, 160, 255)
+STATUS_OFF_COLOR = (90, 90, 90)
+# (name, left edge, right edge) of every button in pixels.
+BUTTONS = [("protocol", 6, 256), ("pause", 264, 474), ("photo", 482, 602), ("list", 610, 770), ("quit", 778, 918)]
+KEY_HELP = "c = Kalibrieren"
 # cv2.putText only knows ASCII letters, so umlauts are written out.
 ASCII_REPLACEMENTS = {"ä": "ae", "ö": "oe", "ü": "ue", "Ä": "Ae", "Ö": "Oe", "Ü": "Ue", "ß": "ss"}
 
@@ -89,20 +91,33 @@ def to_ascii(text):
 
 
 def add_status_bar(window, protocol_running, paused):
-    """Puts a dark bar above the window that shows whether the protocol runs and whether there is a pause.
+    """Puts a dark bar with buttons above the window; it shows whether the protocol runs and whether there is a pause.
 
-    A filled circle in front of each word works like a lamp: red = protocol runs,
-    orange = pause, grey = off. The keys are listed on the right.
+    The protocol button is red while a protocol runs, the pause button orange during
+    a pause. The buttons are plain filled rectangles (numpy slices) with text.
     """
     bar = np.zeros((STATUS_HEIGHT_PX, window.shape[1], 3), dtype=np.uint8)
     bar[:] = STATUS_BACKGROUND
-    middle = STATUS_HEIGHT_PX // 2
-    protocol_text = "PROTOKOLL LAEUFT" if protocol_running else "Protokoll aus"
-    protocol_color = STATUS_ON_COLOR if protocol_running else STATUS_OFF_COLOR
-    pause_text = "PAUSE - u = weiter" if paused else "Erkennung laeuft"
-    pause_color = STATUS_PAUSE_COLOR if paused else STATUS_OFF_COLOR
-    for x, text, color in [(20, protocol_text, protocol_color), (300, pause_text, pause_color)]:
-        cv2.circle(bar, (x, middle), 9, color, -1)
-        cv2.putText(bar, text, (x + 18, middle + 7), cv2.FONT_HERSHEY_SIMPLEX, 0.65, STATUS_TEXT_COLOR, 2)
-    cv2.putText(bar, KEY_HELP, (620, middle + 6), cv2.FONT_HERSHEY_SIMPLEX, 0.5, STATUS_OFF_COLOR, 1)
+    labels = {
+        "protocol": ("PROTOKOLL STOPPEN (p)", STATUS_ON_COLOR) if protocol_running else ("Protokoll starten (p)", STATUS_OFF_COLOR),
+        "pause": ("PAUSE - weiter (u)", STATUS_PAUSE_COLOR) if paused else ("Pause (u)", STATUS_OFF_COLOR),
+        "photo": ("Foto (s)", STATUS_OFF_COLOR),
+        "list": ("Liste (Leer)", STATUS_OFF_COLOR),
+        "quit": ("Beenden (q)", STATUS_OFF_COLOR),
+    }
+    for name, left, right in BUTTONS:
+        text, color = labels[name]
+        bar[5 : STATUS_HEIGHT_PX - 5, left:right] = color
+        cv2.putText(bar, text, (left + 8, STATUS_HEIGHT_PX // 2 + 6), cv2.FONT_HERSHEY_SIMPLEX, 0.5, STATUS_TEXT_COLOR, 1)
+    cv2.putText(bar, KEY_HELP, (BUTTONS[-1][2] + 16, STATUS_HEIGHT_PX // 2 + 6), cv2.FONT_HERSHEY_SIMPLEX, 0.5, STATUS_TEXT_COLOR, 1)
     return np.vstack([bar, window])
+
+
+def button_at(x, y):
+    """Name of the button at a mouse position in the window, e.g. "pause", or None."""
+    if not 0 <= y < STATUS_HEIGHT_PX:
+        return None
+    for name, left, right in BUTTONS:
+        if left <= x < right:
+            return name
+    return None
