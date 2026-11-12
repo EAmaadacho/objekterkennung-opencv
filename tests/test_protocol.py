@@ -21,9 +21,9 @@ def test_A4_protocol_counts_label_changes(tmp_path):
         protocol.add(raw, [RED_CUBE])
     summary = protocol.close()
 
-    assert "Wechsel der Beschriftung, roh: 2" in summary
-    assert "Wechsel der Beschriftung, angezeigt: 0" in summary
-    assert "rot Würfel: 3" in summary
+    assert "Label changes, raw: 2" in summary
+    assert "Label changes, shown: 0" in summary
+    assert "red cube: 3" in summary
 
 
 def test_A4_protocol_writes_one_row_per_object_and_saves_images(tmp_path):
@@ -33,9 +33,9 @@ def test_A4_protocol_writes_one_row_per_object_and_saves_images(tmp_path):
     protocol.add([RED_CUBE], [RED_CUBE], field_image=field, window_image=field)
     protocol.close()
 
-    folder = tmp_path / "2026-11-10_20-00-00_protokoll"
-    with open(folder / "beschriftungen.csv", encoding="utf-8") as file:
+    folder = tmp_path / "2026-11-10_20-00-00_protocol"
+    with open(folder / "labels.csv", encoding="utf-8") as file:
         rows = list(csv.reader(file, delimiter=";"))
-    assert rows[1:] == [["0", rows[1][1], "roh", "red", "cube", "0.400", "0.700"], ["0", rows[2][1], "angezeigt", "red", "cube", "0.400", "0.700"]]
-    assert (folder / "00000_feld.png").exists()
-    assert (folder / "00000_fenster.jpg").exists()
+    assert rows[1:] == [["0", rows[1][1], "raw", "red", "cube", "0.400", "0.700"], ["0", rows[2][1], "shown", "red", "cube", "0.400", "0.700"]]
+    assert (folder / "00000_field.png").exists()
+    assert (folder / "00000_window.jpg").exists()

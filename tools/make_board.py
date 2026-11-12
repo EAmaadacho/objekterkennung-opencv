@@ -36,7 +36,7 @@ def main():
 
     pdf.showPage()
     pdf.save()
-    print(f"Spielfeld gespeichert: {OUTPUT_PATH}")
+    print(f"Board saved: {OUTPUT_PATH}")
 
 
 def _y(top_mm):

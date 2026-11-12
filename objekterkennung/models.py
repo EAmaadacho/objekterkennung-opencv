@@ -3,14 +3,6 @@
 from dataclasses import dataclass
 
 SHAPE_NAMES = ("cube", "cuboid", "prism", "sphere", "unknown")
-SHAPE_LABELS = {
-    "cube": "Würfel",
-    "cuboid": "Quader",
-    "prism": "Prisma",
-    "sphere": "Kugel",
-    "unknown": "unbekannt",
-}
-COLOR_LABELS = {"red": "rot", "yellow": "gelb", "green": "grün", "blue": "blau"}
 
 
 @dataclass(frozen=True)
@@ -27,13 +19,13 @@ class DetectedObject:
     y: float
 
     def name(self):
-        """German name for the output, e.g. "rot Würfel"."""
-        return f"{COLOR_LABELS[self.color]} {SHAPE_LABELS[self.shape]}"
+        """Name for the output, e.g. "red cube"."""
+        return f"{self.color} {self.shape}"
 
     def position(self):
         """Rounded position for the output, e.g. "(0.42 | 0.71)"."""
         return f"({self.x:.2f} | {self.y:.2f})"
 
     def label(self):
-        """Name and position, e.g. "rot Würfel (0.42 | 0.71)"."""
+        """Name and position, e.g. "red cube (0.42 | 0.71)"."""
         return f"{self.name()} {self.position()}"

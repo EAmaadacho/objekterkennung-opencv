@@ -10,7 +10,7 @@ def test_A3_label_shows_rounded_coordinates():
 
     text = detected.label()
 
-    assert text == "rot Würfel (0.42 | 0.71)"
+    assert text == "red cube (0.42 | 0.71)"
 
 
 def test_A1_all_four_object_shapes_are_known():

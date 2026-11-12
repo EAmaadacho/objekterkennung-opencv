@@ -2,8 +2,6 @@
 
 import argparse
 import sys
-from datetime import datetime
-from pathlib import Path
 
 import cv2
 
@@ -18,17 +16,14 @@ from objekterkennung.protocol import LabelProtocol
 from objekterkennung.smoothing import FrameSmoother
 from objekterkennung.tracker import ChangeTracker
 
-WINDOW_NAME = "Objekterkennung"
-HAND_TEXT = "Hand im Feld - Meldungen pausiert"
+WINDOW_NAME = "Object detection"
+HAND_TEXT = "Hand in field - reports paused"
 QUIT_KEY = "q"
-LIST_KEY = " "
-SCREENSHOT_KEY = "s"
 CALIBRATION_KEY = "c"
 PAUSE_KEY = "u"
-PAUSE_TEXT = "PAUSE zum Umbauen - u = weiter"
+PAUSE_TEXT = "PAUSED - move the blocks, then press u"
 PROTOCOL_KEY = "p"
-SCREENSHOT_FOLDER = Path("screenshots")
-BUTTON_KEYS = {"protocol": PROTOCOL_KEY, "pause": PAUSE_KEY, "photo": SCREENSHOT_KEY, "list": LIST_KEY, "quit": QUIT_KEY}
+BUTTON_KEYS = {"protocol": PROTOCOL_KEY, "pause": PAUSE_KEY, "quit": QUIT_KEY}
 
 
 def main():
@@ -37,11 +32,11 @@ def main():
     try:
         _run(arguments)
     except CameraError as error:
-        print(f"Fehler: {error}")
+        print(f"Error: {error}")
         sys.exit(1)
     except KeyboardInterrupt:
         # Ctrl+C in the terminal: the protocol is already saved by the finally block in _run.
-        print("Beendet mit Strg+C.")
+        print("Stopped with Ctrl+C.")
 
 
 def _run(arguments):
@@ -61,7 +56,7 @@ def _run(arguments):
     cv2.namedWindow(WINDOW_NAME)
     # OpenCV calls this function for every mouse event in the window; a left click is kept for the loop.
     cv2.setMouseCallback(WINDOW_NAME, lambda event, x, y, flags, param: _remember_click(event, x, y, clicks))
-    print("Start. Tasten: q = beenden, Leertaste = Objektliste, s = Bildschirmfoto, p = Protokoll an/aus, u = Pause zum Umbauen, c = Kalibrierung")
+    print("Started. Keys: p = protocol on/off, u = pause on/off, c = calibration, q = quit")
     try:
         while True:
             frame = read_frame(capture)
@@ -99,15 +94,11 @@ def _run(arguments):
                     key = ord(BUTTON_KEYS[name])
             if key == ord(QUIT_KEY):
                 break
-            if key == ord(LIST_KEY):
-                _print_object_list(tracker.current_objects())
-            if key == ord(SCREENSHOT_KEY):
-                _save_screenshot(window)
             if key == ord(PROTOCOL_KEY):
                 protocol = _toggle_protocol(protocol)
             if key == ord(PAUSE_KEY):
                 paused = not paused
-                print("Pause zum Umbauen (u = weiter)" if paused else "Weiter")
+                print("Paused (u = resume)" if paused else "Resumed")
             if key == ord(CALIBRATION_KEY):
                 run_calibration(capture)
                 # The new colour ranges are in config.json now, so they are read again.
@@ -121,16 +112,9 @@ def _run(arguments):
 
 def _parse_arguments():
     """Reads the command line: "python main.py --calibrate" starts with the calibration mode."""
-    parser = argparse.ArgumentParser(description="Erkennt Form, Farbe und Position von Objekten auf dem Spielfeld.")
-    parser.add_argument("--calibrate", action="store_true", help="erst den Kalibriermodus öffnen")
+    parser = argparse.ArgumentParser(description="Detects shape, colour and position of the objects on the field.")
+    parser.add_argument("--calibrate", action="store_true", help="open the calibration mode first")
     return parser.parse_args()
-
-
-def _print_object_list(objects):
-    """Prints all objects of the last stable scene, one per line."""
-    print(f"--- {len(objects)} Objekte ---")
-    for item in objects:
-        print(item.label())
 
 
 def _remember_click(event, x, y, clicks):
@@ -143,19 +127,11 @@ def _toggle_protocol(protocol):
     """Starts a new label protocol, or stops the running one and prints its summary."""
     if protocol is None:
         protocol = LabelProtocol()
-        print(f"Protokoll läuft: {protocol.folder} (p = stoppen)")
+        print(f"Protocol recording: {protocol.folder} (p = stop)")
         return protocol
     print(protocol.close())
-    print(f"Protokoll gespeichert: {protocol.folder}")
+    print(f"Protocol saved: {protocol.folder}")
     return None
-
-
-def _save_screenshot(window):
-    """Saves the window content, e.g. screenshots/2026-11-26_10-15-02.png."""
-    SCREENSHOT_FOLDER.mkdir(exist_ok=True)
-    path = SCREENSHOT_FOLDER / f"{datetime.now():%Y-%m-%d_%H-%M-%S}.png"
-    cv2.imwrite(str(path), window)
-    print(f"Bildschirmfoto gespeichert: {path}")
 
 
 if __name__ == "__main__":

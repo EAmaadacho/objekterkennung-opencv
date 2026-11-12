@@ -14,7 +14,7 @@ import cv2  # noqa: E402
 from objekterkennung.camera import open_camera, read_frame  # noqa: E402
 from objekterkennung.config import load_settings  # noqa: E402
 
-WINDOW_NAME = "Kamera-Check"
+WINDOW_NAME = "Camera check"
 QUIT_KEY = "q"
 SETTINGS_KEY = "e"
 ZOOM_OUT_KEY = "-"
@@ -27,9 +27,9 @@ def main():
     capture = open_camera(settings.camera_index)
     width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    print(f"Kamera {settings.camera_index} ({capture.getBackendName()}): {width} x {height} Pixel")
+    print(f"Camera {settings.camera_index} ({capture.getBackendName()}): {width} x {height} pixels")
     _print_zoom(capture)
-    print("Tasten: - = rauszoomen, + = reinzoomen, e = Treibereinstellungen, q = beenden")
+    print("Keys: - = zoom out, + = zoom in, e = driver settings, q = quit")
     try:
         while True:
             frame = read_frame(capture)
@@ -42,7 +42,7 @@ def main():
             if key == ord(SETTINGS_KEY):
                 # Opens the driver dialog of the camera; only DirectShow supports it.
                 if not capture.set(cv2.CAP_PROP_SETTINGS, 1):
-                    print("Treibereinstellungen werden von diesem Treiber nicht unterstuetzt.")
+                    print("This driver does not support the settings dialog.")
             if key in (ord(ZOOM_OUT_KEY), ord(ZOOM_IN_KEY)):
                 step = -ZOOM_STEP if key == ord(ZOOM_OUT_KEY) else ZOOM_STEP
                 capture.set(cv2.CAP_PROP_ZOOM, capture.get(cv2.CAP_PROP_ZOOM) + step)
@@ -54,7 +54,7 @@ def main():
 
 def _print_zoom(capture):
     """Prints the current zoom; -1 or 0 means the driver does not report it."""
-    print(f"Zoom-Wert: {capture.get(cv2.CAP_PROP_ZOOM)}")
+    print(f"Zoom value: {capture.get(cv2.CAP_PROP_ZOOM)}")
 
 
 if __name__ == "__main__":

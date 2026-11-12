@@ -5,7 +5,7 @@ import numpy as np
 
 from objekterkennung.board import unit_to_pixel
 
-NO_FIELD_TEXT = "Spielfeld nicht gefunden"
+NO_FIELD_TEXT = "Field not found"
 TEXT_COLOR = (0, 0, 255)
 MARKER_COLOR = (0, 255, 0)
 LABEL_COLOR = (0, 0, 0)
@@ -13,17 +13,18 @@ DOT_COLOR = (255, 0, 255)
 # Wider windows do not fit on a laptop screen; the camera image is shrunk instead of the field.
 MAX_WINDOW_WIDTH = 1400
 # Status bar above the window with buttons for the mouse; each button also has a key.
-STATUS_HEIGHT_PX = 40
+STATUS_HEIGHT_PX = 50
 STATUS_BACKGROUND = (40, 40, 40)
 STATUS_TEXT_COLOR = (255, 255, 255)
 STATUS_ON_COLOR = (0, 0, 220)
 STATUS_PAUSE_COLOR = (0, 160, 255)
 STATUS_OFF_COLOR = (90, 90, 90)
+STATUS_LIVE_COLOR = (0, 200, 0)
+# During a pause the whole window gets an orange frame of this width, so the pause is seen at once.
+PAUSE_FRAME_PX = 8
 # (name, left edge, right edge) of every button in pixels.
-BUTTONS = [("protocol", 6, 256), ("pause", 264, 474), ("photo", 482, 602), ("list", 610, 770), ("quit", 778, 918)]
-KEY_HELP = "c = Kalibrieren"
-# cv2.putText only knows ASCII letters, so umlauts are written out.
-ASCII_REPLACEMENTS = {"ä": "ae", "ö": "oe", "ü": "ue", "Ä": "Ae", "Ö": "Oe", "Ü": "Ue", "ß": "ss"}
+BUTTONS = [("protocol", 6, 306), ("pause", 314, 574), ("quit", 582, 702)]
+KEY_HELP = "c = calibrate"
 
 
 def draw_markers(image, markers):
@@ -44,7 +45,7 @@ def compose_window(camera_image, field_image):
     gets the field's height, but at most the width that is left up to
     MAX_WINDOW_WIDTH; if it is lower than the field, black is added below.
     Without a field (no homography yet) only the camera image is shown,
-    with the text "Spielfeld nicht gefunden" in the top-left corner.
+    with the text "Field not found" in the top-left corner.
     """
     if field_image is None:
         result = _fit(camera_image, camera_image.shape[0], MAX_WINDOW_WIDTH)
@@ -71,7 +72,7 @@ def draw_objects(field_image, objects, board):
     for item in objects:
         center = unit_to_pixel(item.x, item.y, board)
         cv2.circle(result, center, 5, DOT_COLOR, -1)
-        lines = [to_ascii(item.name()), item.position()]
+        lines = [item.name(), item.position()]
         for line_number, line in enumerate(lines):
             origin = (center[0] - 40, center[1] + 22 + 18 * line_number)
             cv2.putText(result, line, origin, cv2.FONT_HERSHEY_SIMPLEX, 0.5, LABEL_COLOR, 1, cv2.LINE_AA)
@@ -79,38 +80,45 @@ def draw_objects(field_image, objects, board):
 
 
 def draw_notice(image, text):
-    """Writes a red notice into the top-left corner of a copy, e.g. "Hand im Feld - Meldungen pausiert"."""
+    """Writes a red notice into the top-left corner of a copy, e.g. "Hand in field - reports paused"."""
     result = image.copy()
-    cv2.putText(result, to_ascii(text), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, TEXT_COLOR, 2)
+    cv2.putText(result, text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, TEXT_COLOR, 2)
     return result
-
-
-def to_ascii(text):
-    """Replaces umlauts, e.g. "grün Würfel" becomes "gruen Wuerfel"."""
-    return "".join(ASCII_REPLACEMENTS.get(letter, letter) for letter in text)
 
 
 def add_status_bar(window, protocol_running, paused):
     """Puts a dark bar with buttons above the window; it shows whether the protocol runs and whether there is a pause.
 
     The protocol button is red while a protocol runs, the pause button orange during
-    a pause. The buttons are plain filled rectangles (numpy slices) with text.
+    a pause, and a pause also gets an orange frame around the whole window. Next to the
+    buttons one line says in words what the program is doing right now.
+    The buttons are plain filled rectangles (numpy slices) with text.
     """
+    result = window.copy()
+    if paused:
+        result[:PAUSE_FRAME_PX] = STATUS_PAUSE_COLOR
+        result[-PAUSE_FRAME_PX:] = STATUS_PAUSE_COLOR
+        result[:, :PAUSE_FRAME_PX] = STATUS_PAUSE_COLOR
+        result[:, -PAUSE_FRAME_PX:] = STATUS_PAUSE_COLOR
     bar = np.zeros((STATUS_HEIGHT_PX, window.shape[1], 3), dtype=np.uint8)
     bar[:] = STATUS_BACKGROUND
     labels = {
-        "protocol": ("PROTOKOLL STOPPEN (p)", STATUS_ON_COLOR) if protocol_running else ("Protokoll starten (p)", STATUS_OFF_COLOR),
-        "pause": ("PAUSE - weiter (u)", STATUS_PAUSE_COLOR) if paused else ("Pause (u)", STATUS_OFF_COLOR),
-        "photo": ("Foto (s)", STATUS_OFF_COLOR),
-        "list": ("Liste (Leer)", STATUS_OFF_COLOR),
-        "quit": ("Beenden (q)", STATUS_OFF_COLOR),
+        "protocol": ("REC - stop protocol (p)", STATUS_ON_COLOR) if protocol_running else ("Start protocol (p)", STATUS_OFF_COLOR),
+        "pause": ("PAUSED - resume (u)", STATUS_PAUSE_COLOR) if paused else ("Pause (u)", STATUS_OFF_COLOR),
+        "quit": ("Quit (q)", STATUS_OFF_COLOR),
     }
+    text_y = STATUS_HEIGHT_PX // 2 + 7
     for name, left, right in BUTTONS:
         text, color = labels[name]
-        bar[5 : STATUS_HEIGHT_PX - 5, left:right] = color
-        cv2.putText(bar, text, (left + 8, STATUS_HEIGHT_PX // 2 + 6), cv2.FONT_HERSHEY_SIMPLEX, 0.5, STATUS_TEXT_COLOR, 1)
-    cv2.putText(bar, KEY_HELP, (BUTTONS[-1][2] + 16, STATUS_HEIGHT_PX // 2 + 6), cv2.FONT_HERSHEY_SIMPLEX, 0.5, STATUS_TEXT_COLOR, 1)
-    return np.vstack([bar, window])
+        bar[6 : STATUS_HEIGHT_PX - 6, left:right] = color
+        cv2.putText(bar, text, (left + 10, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.6, STATUS_TEXT_COLOR, 2 if color != STATUS_OFF_COLOR else 1)
+    state, state_color = ("PAUSED: nothing is detected or recorded", STATUS_PAUSE_COLOR) if paused else ("LIVE: detecting objects", STATUS_LIVE_COLOR)
+    if protocol_running and not paused:
+        state += ", protocol is recording"
+    cv2.putText(bar, state, (BUTTONS[-1][2] + 16, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.6, state_color, 2)
+    (help_width, _), _ = cv2.getTextSize(KEY_HELP, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+    cv2.putText(bar, KEY_HELP, (bar.shape[1] - help_width - 10, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, STATUS_TEXT_COLOR, 1)
+    return np.vstack([bar, result])
 
 
 def button_at(x, y):

@@ -48,7 +48,7 @@ def test_A4_moved_object_is_reported_with_old_and_new_position():
     changes = compare_scenes([RED_CUBE], [moved_cube], MOVE_THRESHOLD)
 
     assert changes[0].kind == MOVED
-    assert changes[0].text() == "VERSCHOBEN: rot Würfel (0.20 | 0.20) -> (0.80 | 0.70)"
+    assert changes[0].text() == "MOVED: red cube (0.20 | 0.20) -> (0.80 | 0.70)"
 
 
 def test_A4_small_jitter_is_not_a_move():

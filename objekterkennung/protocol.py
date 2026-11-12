@@ -8,27 +8,27 @@ from pathlib import Path
 
 import cv2
 
-PROTOCOL_FOLDER = Path("aufnahmen")
+PROTOCOL_FOLDER = Path("recordings")
 # Every 30th frame (about every 1-2 seconds) the images are saved as well.
 IMAGE_EVERY_FRAMES = 30
-RAW = "roh"
-SHOWN = "angezeigt"
+RAW = "raw"
+SHOWN = "shown"
 
 
 class LabelProtocol:
     """Writes one CSV row per object and frame, both for the raw and for the shown (smoothed) result.
 
-    "roh" is what one single frame gives, "angezeigt" is what the window shows
+    "raw" is what one single frame gives, "shown" is what the window shows
     after the smoothing over several frames. Comparing both shows how much the
     smoothing helps.
     """
 
     def __init__(self, folder=PROTOCOL_FOLDER, now=None):
-        self.folder = Path(folder) / f"{(now or datetime.now()):%Y-%m-%d_%H-%M-%S}_protokoll"
+        self.folder = Path(folder) / f"{(now or datetime.now()):%Y-%m-%d_%H-%M-%S}_protocol"
         self.folder.mkdir(parents=True, exist_ok=True)
-        self._file = open(self.folder / "beschriftungen.csv", "w", newline="", encoding="utf-8")
+        self._file = open(self.folder / "labels.csv", "w", newline="", encoding="utf-8")
         self._writer = csv.writer(self._file, delimiter=";")
-        self._writer.writerow(["bild", "zeit_s", "art", "farbe", "form", "x", "y"])
+        self._writer.writerow(["frame", "time_s", "kind", "color", "shape", "x", "y"])
         self._start = time.monotonic()
         self._frames = 0
         self._changes = {RAW: 0, SHOWN: 0}
@@ -48,21 +48,21 @@ class LabelProtocol:
         self._shown_counts.update(item.name() for item in shown_objects)
         if self._frames % IMAGE_EVERY_FRAMES == 0:
             if field_image is not None:
-                cv2.imwrite(str(self.folder / f"{self._frames:05d}_feld.png"), field_image)
+                cv2.imwrite(str(self.folder / f"{self._frames:05d}_field.png"), field_image)
             if window_image is not None:
-                cv2.imwrite(str(self.folder / f"{self._frames:05d}_fenster.jpg"), window_image)
+                cv2.imwrite(str(self.folder / f"{self._frames:05d}_window.jpg"), window_image)
         self._frames += 1
 
     def close(self):
-        """Closes the CSV file, writes zusammenfassung.txt and returns its text."""
+        """Closes the CSV file, writes summary.txt and returns its text."""
         self._file.close()
         lines = [
-            f"Bilder: {self._frames}",
-            f"Wechsel der Beschriftung, roh: {self._changes[RAW]}",
-            f"Wechsel der Beschriftung, angezeigt: {self._changes[SHOWN]}",
-            "Angezeigte Beschriftungen (in wie vielen Bildern):",
+            f"Frames: {self._frames}",
+            f"Label changes, raw: {self._changes[RAW]}",
+            f"Label changes, shown: {self._changes[SHOWN]}",
+            "Shown labels (in how many frames):",
         ]
         lines += [f"  {name}: {count}" for name, count in sorted(self._shown_counts.items())]
         text = "\n".join(lines)
-        (self.folder / "zusammenfassung.txt").write_text(text + "\n", encoding="utf-8")
+        (self.folder / "summary.txt").write_text(text + "\n", encoding="utf-8")
         return text

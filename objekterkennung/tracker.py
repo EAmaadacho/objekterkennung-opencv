@@ -3,9 +3,9 @@
 import math
 from dataclasses import dataclass
 
-NEW = "NEU"
-REMOVED = "ENTFERNT"
-MOVED = "VERSCHOBEN"
+NEW = "NEW"
+REMOVED = "REMOVED"
+MOVED = "MOVED"
 
 
 @dataclass(frozen=True)
@@ -17,7 +17,7 @@ class Change:
     old_item: object = None
 
     def text(self):
-        """Line for the console, e.g. "VERSCHOBEN: rot Würfel (0.20 | 0.20) -> (0.80 | 0.70)"."""
+        """Line for the console, e.g. "MOVED: red cube (0.20 | 0.20) -> (0.80 | 0.70)"."""
         if self.kind == MOVED:
             return f"{MOVED}: {self.item.name()} {self.old_item.position()} -> {self.item.position()}"
         return f"{self.kind}: {self.item.label()}"
@@ -51,13 +51,9 @@ class ChangeTracker:
             self._reported = objects
         return changes
 
-    def current_objects(self):
-        """The last reported scene, e.g. for printing the object list with the space key."""
-        return list(self._reported)
-
 
 def compare_scenes(old_objects, new_objects, move_threshold):
-    """Lists what changed from the old to the new scene: NEU, ENTFERNT or VERSCHOBEN.
+    """Lists what changed from the old to the new scene: NEW, REMOVED or MOVED.
 
     An object only matches an object of the same shape and colour. The two
     nearest of all possible pairs are matched first.

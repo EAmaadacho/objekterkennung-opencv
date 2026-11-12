@@ -67,7 +67,7 @@ def test_A6_read_frame_returns_the_image():
 def test_A6_lost_camera_gives_clear_error():
     capture = FakeCapture(ok=False, frame=None)
 
-    with pytest.raises(CameraError, match="keine Bilder mehr"):
+    with pytest.raises(CameraError, match="stopped sending images"):
         read_frame(capture)
 
 

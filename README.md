@@ -1,6 +1,6 @@
 # Objekterkennung mit OpenCV
 
-Das Programm erkennt mit einer Webcam Form, Farbe und Position von Holzobjekten auf einem 18 cm × 18 cm großen Spielfeld und meldet jede Veränderung. Ein Beispiel: Liegt ein roter Würfel genau in der Mitte des Feldes, zeigt es „rot Würfel (0.50 | 0.50)“; schiebt man ihn nach rechts oben, meldet es „VERSCHOBEN: rot Würfel (0.50 | 0.50) -> (0.80 | 0.70)“. Gebaut ist es mit Python und OpenCV, ohne Netzwerk und ohne KI-Modelle zur Erkennung.
+Das Programm erkennt mit einer Webcam Form, Farbe und Position von Holzobjekten auf einem 18 cm × 18 cm großen Spielfeld und meldet jede Veränderung. Ein Beispiel: Liegt ein roter Würfel genau in der Mitte des Feldes, zeigt es „red cube (0.50 | 0.50)“; schiebt man ihn nach rechts oben, meldet es „MOVED: red cube (0.50 | 0.50) -> (0.80 | 0.70)“. Wie der Code sind alle Ausgaben und die Oberfläche auf Englisch. Gebaut ist es mit Python und OpenCV, ohne Netzwerk und ohne KI-Modelle zur Erkennung.
 
 Entstanden im Modul PALG (Projekt Algorithmen) an der FHDW, Studiengruppe MFAX424A.
 
@@ -36,14 +36,12 @@ Mit `main.py --calibrate` startet der Kalibriermodus: Mit Schiebereglern werden 
 
 ## Bedienung
 
-Über dem Bild liegt eine Statusleiste mit Buttons für die Maus. Rot heißt: Das Protokoll läuft, orange heißt: Pause. Jeder Button hat auch eine Taste:
+Über dem Bild liegt eine Statusleiste mit drei Buttons für die Maus: Protokoll, Pause und Beenden. Läuft das Protokoll, ist sein Button rot („REC“). Während einer Pause ist der Pause-Button orange und das ganze Fenster orange umrandet. Daneben steht in Worten, was das Programm gerade tut („LIVE“ oder „PAUSED“). Jeder Button hat auch eine Taste:
 
 | Taste | Wirkung |
 |---|---|
 | `q` | beenden |
-| `space` | aktuelle Objektliste in der Konsole ausgeben |
-| `s` | Bildschirmfoto in `screenshots/` speichern |
-| `p` | Protokoll starten/stoppen: jede Beschriftung als CSV, alle 30 Bilder Feld und Fenster, Zusammenfassung in `aufnahmen/` |
+| `p` | Protokoll starten/stoppen: jede Beschriftung als CSV, alle 30 Bilder Feld und Fenster, Zusammenfassung in `recordings/` |
 | `u` | Pause zum Umbauen an/aus: keine Erkennung, keine Meldungen, kein Protokoll; danach werden die Veränderungen gemeldet |
 | `c` | Kalibriermodus öffnen |
 
