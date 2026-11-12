@@ -7,7 +7,7 @@
     "warp_px": 600
   },
   "saturation_min": {
-    "red": 110,
+    "red": 100,
     "yellow": 80,
     "green": 60,
     "blue": 60
