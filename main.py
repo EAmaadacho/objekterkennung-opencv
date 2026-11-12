@@ -12,7 +12,7 @@ from objekterkennung.calibration import run_calibration
 from objekterkennung.camera import CameraError, open_camera, read_frame
 from objekterkennung.config import load_settings
 from objekterkennung.detector import detect_objects
-from objekterkennung.display import compose_window, draw_markers, draw_notice, draw_objects
+from objekterkennung.display import add_status_bar, compose_window, draw_markers, draw_notice, draw_objects
 from objekterkennung.hand import hand_in_field
 from objekterkennung.protocol import LabelProtocol
 from objekterkennung.smoothing import FrameSmoother
@@ -25,7 +25,7 @@ LIST_KEY = " "
 SCREENSHOT_KEY = "s"
 CALIBRATION_KEY = "c"
 PAUSE_KEY = "u"
-PAUSE_TEXT = "Pause zum Umbauen - u = weiter"
+PAUSE_TEXT = "PAUSE zum Umbauen - u = weiter"
 PROTOCOL_KEY = "p"
 SCREENSHOT_FOLDER = Path("screenshots")
 
@@ -81,6 +81,7 @@ def _run(arguments):
                 if hand:
                     field_view = draw_notice(field_view, HAND_TEXT)
             window = compose_window(draw_markers(frame, find_markers(frame)), field_view)
+            window = add_status_bar(window, protocol is not None, paused)
             cv2.imshow(WINDOW_NAME, window)
             if protocol is not None and field_view is not None and not paused:
                 protocol.add(raw_objects, objects, field, window)

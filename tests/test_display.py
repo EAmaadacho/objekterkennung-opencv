@@ -3,7 +3,19 @@
 import numpy as np
 
 from objekterkennung.config import load_settings
-from objekterkennung.display import DOT_COLOR, MAX_WINDOW_WIDTH, compose_window, draw_markers, draw_notice, draw_objects
+from objekterkennung.display import (
+    DOT_COLOR,
+    MAX_WINDOW_WIDTH,
+    STATUS_HEIGHT_PX,
+    STATUS_OFF_COLOR,
+    STATUS_ON_COLOR,
+    STATUS_PAUSE_COLOR,
+    add_status_bar,
+    compose_window,
+    draw_markers,
+    draw_notice,
+    draw_objects,
+)
 from objekterkennung.models import DetectedObject
 
 GREEN = (0, 255, 0)
@@ -66,3 +78,29 @@ def test_A4_notice_is_written_without_changing_the_original():
 
     assert result.any()
     assert not image.any()
+
+
+def _has_color(image, color):
+    return bool((image == np.array(color, dtype=np.uint8)).all(axis=2).any())
+
+
+def test_A4_status_bar_shows_running_protocol_and_pause():
+    window = np.zeros((600, 1400, 3), dtype=np.uint8)
+
+    result = add_status_bar(window, protocol_running=True, paused=True)
+
+    bar = result[:STATUS_HEIGHT_PX]
+    assert result.shape == (600 + STATUS_HEIGHT_PX, 1400, 3)
+    assert _has_color(bar, STATUS_ON_COLOR)
+    assert _has_color(bar, STATUS_PAUSE_COLOR)
+
+
+def test_A4_status_bar_is_grey_when_protocol_is_off_and_no_pause():
+    window = np.zeros((600, 1400, 3), dtype=np.uint8)
+
+    result = add_status_bar(window, protocol_running=False, paused=False)
+
+    bar = result[:STATUS_HEIGHT_PX]
+    assert not _has_color(bar, STATUS_ON_COLOR)
+    assert not _has_color(bar, STATUS_PAUSE_COLOR)
+    assert _has_color(bar, STATUS_OFF_COLOR)

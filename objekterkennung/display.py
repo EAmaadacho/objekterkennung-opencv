@@ -12,6 +12,14 @@ LABEL_COLOR = (0, 0, 0)
 DOT_COLOR = (255, 0, 255)
 # Wider windows do not fit on a laptop screen; the camera image is shrunk instead of the field.
 MAX_WINDOW_WIDTH = 1400
+# Status bar above the window: protocol on/off, pause, and the keys.
+STATUS_HEIGHT_PX = 40
+STATUS_BACKGROUND = (40, 40, 40)
+STATUS_TEXT_COLOR = (255, 255, 255)
+STATUS_ON_COLOR = (0, 0, 255)
+STATUS_PAUSE_COLOR = (0, 200, 255)
+STATUS_OFF_COLOR = (150, 150, 150)
+KEY_HELP = "p Protokoll | u Pause | Leertaste Liste | s Foto | c Kalibrieren | q Ende"
 # cv2.putText only knows ASCII letters, so umlauts are written out.
 ASCII_REPLACEMENTS = {"ä": "ae", "ö": "oe", "ü": "ue", "Ä": "Ae", "Ö": "Oe", "Ü": "Ue", "ß": "ss"}
 
@@ -78,3 +86,23 @@ def draw_notice(image, text):
 def to_ascii(text):
     """Replaces umlauts, e.g. "grün Würfel" becomes "gruen Wuerfel"."""
     return "".join(ASCII_REPLACEMENTS.get(letter, letter) for letter in text)
+
+
+def add_status_bar(window, protocol_running, paused):
+    """Puts a dark bar above the window that shows whether the protocol runs and whether there is a pause.
+
+    A filled circle in front of each word works like a lamp: red = protocol runs,
+    orange = pause, grey = off. The keys are listed on the right.
+    """
+    bar = np.zeros((STATUS_HEIGHT_PX, window.shape[1], 3), dtype=np.uint8)
+    bar[:] = STATUS_BACKGROUND
+    middle = STATUS_HEIGHT_PX // 2
+    protocol_text = "PROTOKOLL LAEUFT" if protocol_running else "Protokoll aus"
+    protocol_color = STATUS_ON_COLOR if protocol_running else STATUS_OFF_COLOR
+    pause_text = "PAUSE - u = weiter" if paused else "Erkennung laeuft"
+    pause_color = STATUS_PAUSE_COLOR if paused else STATUS_OFF_COLOR
+    for x, text, color in [(20, protocol_text, protocol_color), (300, pause_text, pause_color)]:
+        cv2.circle(bar, (x, middle), 9, color, -1)
+        cv2.putText(bar, text, (x + 18, middle + 7), cv2.FONT_HERSHEY_SIMPLEX, 0.65, STATUS_TEXT_COLOR, 2)
+    cv2.putText(bar, KEY_HELP, (620, middle + 6), cv2.FONT_HERSHEY_SIMPLEX, 0.5, STATUS_OFF_COLOR, 1)
+    return np.vstack([bar, window])
