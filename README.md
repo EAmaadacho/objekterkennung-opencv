@@ -42,6 +42,7 @@ Mit `main.py --calibrate` startet der Kalibriermodus: Mit Schiebereglern werden 
 | `space` | aktuelle Objektliste in der Konsole ausgeben |
 | `s` | Bildschirmfoto in `screenshots/` speichern |
 | `p` | Protokoll starten/stoppen: jede Beschriftung als CSV, alle 30 Bilder Feld und Fenster, Zusammenfassung in `aufnahmen/` |
+| `u` | Pause zum Umbauen an/aus: keine Erkennung, keine Meldungen, kein Protokoll; danach werden die Veränderungen gemeldet |
 | `c` | Kalibriermodus öffnen |
 
 ## Tests

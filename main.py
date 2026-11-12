@@ -24,6 +24,8 @@ QUIT_KEY = "q"
 LIST_KEY = " "
 SCREENSHOT_KEY = "s"
 CALIBRATION_KEY = "c"
+PAUSE_KEY = "u"
+PAUSE_TEXT = "Pause zum Umbauen - u = weiter"
 PROTOCOL_KEY = "p"
 SCREENSHOT_FOLDER = Path("screenshots")
 
@@ -53,13 +55,18 @@ def _run(arguments):
     protocol = None
     homography = None
     objects = []
-    print("Start. Tasten: q = beenden, Leertaste = Objektliste, s = Bildschirmfoto, p = Protokoll an/aus, c = Kalibrierung")
+    paused = False
+    print("Start. Tasten: q = beenden, Leertaste = Objektliste, s = Bildschirmfoto, p = Protokoll an/aus, u = Pause zum Umbauen, c = Kalibrierung")
     try:
         while True:
             frame = read_frame(capture)
             homography = find_homography(frame, settings.board, last_homography=homography)
             field_view = None
-            if homography is not None:
+            if paused and homography is not None:
+                # Nothing is detected, reported or recorded, but the field stays visible
+                # so it can be rebuilt. Changes are reported once the pause ends.
+                field_view = draw_notice(straighten_field(frame, homography, settings.board), PAUSE_TEXT)
+            elif homography is not None:
                 field = straighten_field(frame, homography, settings.board)
                 hand = hand_in_field(field, settings)
                 raw_objects = []
@@ -75,7 +82,7 @@ def _run(arguments):
                     field_view = draw_notice(field_view, HAND_TEXT)
             window = compose_window(draw_markers(frame, find_markers(frame)), field_view)
             cv2.imshow(WINDOW_NAME, window)
-            if protocol is not None and field_view is not None:
+            if protocol is not None and field_view is not None and not paused:
                 protocol.add(raw_objects, objects, field, window)
             # waitKey(1) waits 1 ms for a key and lets the window redraw itself.
             key = cv2.waitKey(1) & 0xFF
@@ -87,6 +94,9 @@ def _run(arguments):
                 _save_screenshot(window)
             if key == ord(PROTOCOL_KEY):
                 protocol = _toggle_protocol(protocol)
+            if key == ord(PAUSE_KEY):
+                paused = not paused
+                print("Pause zum Umbauen (u = weiter)" if paused else "Weiter")
             if key == ord(CALIBRATION_KEY):
                 run_calibration(capture)
                 # The new colour ranges are in config.json now, so they are read again.
