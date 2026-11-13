@@ -44,6 +44,29 @@ def straighten_field(image, homography, board):
     return cv2.warpPerspective(image, homography, (size, size))
 
 
+def upright_turns(homography, board):
+    """How many quarter turns (np.rot90) make the camera image show the field upright, i.e. 0, 1, 2 or 3.
+
+    Upright means as seen from the front of the field: (0,0) bottom left, x to the right.
+    The bottom edge of the field is mapped back into the camera image with the inverse
+    homography; its direction says how the camera is turned against the field. Only
+    quarter turns are used, because they keep every pixel (no new pixels are calculated);
+    a rest of up to 45 degrees is left to the setup mode ("turn paper").
+    """
+    margin = margin_px(board)
+    far = margin + board.field_size_in_image_px
+    bottom_edge = np.float32([[margin, far], [far, far]]).reshape(-1, 1, 2)
+    left, right = cv2.perspectiveTransform(bottom_edge, np.linalg.inv(homography)).reshape(2, 2)
+    # The y axis of an image points down, so an edge pointing down has an angle of +90 degrees.
+    angle = np.degrees(np.arctan2(right[1] - left[1], right[0] - left[0]))
+    return round(angle / 90) % 4
+
+
+def turn_upright(image, turns):
+    """Turns an image by quarter turns counter-clockwise (np.rot90), e.g. turns from upright_turns."""
+    return np.ascontiguousarray(np.rot90(image, turns))
+
+
 def margin_px(board):
     """Width of the paper margin around the field in the straight image, e.g. 50 px for margin_around_field_mm 15.
 

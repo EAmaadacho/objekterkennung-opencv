@@ -11,6 +11,8 @@ from objekterkennung.capture.board import (
     find_markers,
     margin_px,
     straighten_field,
+    turn_upright,
+    upright_turns,
 )
 from objekterkennung.capture.camera import read_frame
 from objekterkennung.output.display import (
@@ -156,7 +158,7 @@ def field_centre_lines(corners):
 def check_size(corners, shape):
     """How much of the image height the field fills."""
     height = (_length(corners[0], corners[3]) + _length(corners[1], corners[2])) / 2
-    share = height / shape[0]
+    share = height / min(shape[:2])
     text = f"fills {share:.0%} of image height"
     if share > SIZE_MAX:
         return Check("Size", WARN, f"{text} - move camera higher")
@@ -260,8 +262,14 @@ def draw_setup(frame, checks, corners):
 
     The panel is placed next to the image (np.hstack), so it never hides the field.
     """
-    scale = min((WINDOW_MAX_WIDTH - PANEL_WIDTH) / frame.shape[1], WINDOW_MAX_HEIGHT / frame.shape[0])
-    image = cv2.resize(draw_markers(frame, find_markers(frame)), None, fx=scale, fy=scale)
+    # Only the square in the middle is shown, so a turned (upright) camera image is as large as a normal one.
+    side = min(frame.shape[:2])
+    top, left = (frame.shape[0] - side) // 2, (frame.shape[1] - side) // 2
+    square = draw_markers(frame, find_markers(frame))[top : top + side, left : left + side]
+    if corners is not None:
+        corners = corners - [left, top]
+    scale = min((WINDOW_MAX_WIDTH - PANEL_WIDTH) / side, WINDOW_MAX_HEIGHT / side)
+    image = cv2.resize(square, None, fx=scale, fy=scale)
     height, width = image.shape[:2]
     # Guide lines, drawn see-through: a cross through the middle and the corners of the target square.
     guides = image.copy()
@@ -389,8 +397,15 @@ def run_setup(capture, settings, window_name):
     clicks = []
     cv2.namedWindow(window_name)
     cv2.setMouseCallback(window_name, lambda event, x, y, flags, param: _remember_start(event, x, y, clicks))
+    turns = 0
     while True:
         frame = read_frame(capture)
+        # The image is turned so the field is seen from the front; then "left" or "down" on the
+        # screen is the same as at the table. Without all markers the last turn is kept.
+        homography = find_homography(frame, settings.board)
+        if homography is not None:
+            turns = upright_turns(homography, settings.board)
+        frame = turn_upright(frame, turns)
         checks, corners = check_setup(frame, settings)
         cv2.imshow(window_name, draw_setup(frame, checks, corners))
         key = cv2.waitKey(1) & 0xFF

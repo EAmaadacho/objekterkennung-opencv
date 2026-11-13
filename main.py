@@ -9,6 +9,8 @@ from objekterkennung.capture.board import (
     find_homography,
     find_markers,
     straighten_field,
+    turn_upright,
+    upright_turns,
 )
 from objekterkennung.capture.calibration import run_calibration
 from objekterkennung.capture.camera import CameraError, open_camera, read_frame
@@ -95,7 +97,11 @@ def _run(arguments):
                 field_view = draw_objects(field, objects, settings.board)
                 if hand:
                     field_view = draw_notice(field_view, HAND_TEXT)
-            window = compose_window(draw_markers(frame, find_markers(frame)), field_view)
+            camera_view = frame
+            if homography is not None:
+                # The camera image is turned like the straight field, so both show the field from the front.
+                camera_view = turn_upright(frame, upright_turns(homography, settings.board))
+            window = compose_window(draw_markers(camera_view, find_markers(camera_view)), field_view)
             window = add_status_bar(window, protocol is not None, paused)
             cv2.imshow(WINDOW_NAME, window)
             if protocol is not None and field_view is not None and not paused:

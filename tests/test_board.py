@@ -12,7 +12,9 @@ from objekterkennung.capture.board import (
     margin_px,
     pixel_to_unit,
     straighten_field,
+    turn_upright,
     unit_to_pixel,
+    upright_turns,
 )
 from objekterkennung.config import load_settings
 
@@ -85,6 +87,20 @@ def test_A3_unit_to_pixel_is_the_way_back():
     pixel = unit_to_pixel(0.5, 0.75, board)
 
     assert pixel == (350, 200)
+
+
+def test_A6_turned_camera_image_is_turned_back_upright():
+    # A red dot near (0,0): after turning, it must lie bottom left in the camera image, like at the table.
+    board = load_settings().board
+    upright = _tilt(_draw_board(board, red_dot_at=(0.1, 0.1)))
+    for turns in range(4):
+        camera_image = np.rot90(upright, turns)
+        homography = find_homography(camera_image, board)
+
+        turned = turn_upright(camera_image, upright_turns(homography, board))
+
+        x, y = _red_center(turned)
+        assert x < turned.shape[1] / 2 and y > turned.shape[0] / 2
 
 
 def _draw_board(board, red_dot_at=None):
