@@ -70,7 +70,28 @@ def test_A6_tilted_camera_is_found():
 
     checks, _ = check_setup(tilted, board)
 
-    assert checks[2].level in (WARN, BAD) and "top" in checks[2].text
+    assert checks[2].level in (WARN, BAD) and "top side" in checks[2].text and "to the bottom" in checks[2].text
+
+
+def test_A6_paper_turned_by_90_degrees_counts_as_straight():
+    board = load_settings().board
+    frame = np.ascontiguousarray(np.rot90(_draw_board(board)))
+
+    checks, _ = check_setup(frame, board)
+
+    assert checks[2].level == OK
+
+
+def test_A6_slightly_turned_paper_gets_a_turn_hint():
+    board = load_settings().board
+    frame = _draw_board(board)
+    center = (frame.shape[1] / 2, frame.shape[0] / 2)
+    # A positive angle turns the image anticlockwise on the screen, so the hint must say clockwise.
+    turned = cv2.warpAffine(frame, cv2.getRotationMatrix2D(center, 5, 1.0), frame.shape[1::-1], borderValue=(PAPER,) * 3)
+
+    checks, _ = check_setup(turned, board)
+
+    assert checks[2].level == WARN and "5 deg" in checks[2].text and "turn paper clockwise" in checks[2].text
 
 
 def test_A7_dark_paper_is_too_dark():

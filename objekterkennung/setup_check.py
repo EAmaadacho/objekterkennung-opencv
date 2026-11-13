@@ -112,23 +112,30 @@ def check_size(corners, shape):
 
 
 def check_straight(corners):
-    """Compares opposite field edges (camera tilted?) and the angle of the top edge (field turned?)."""
-    top, bottom = _length(corners[0], corners[1]), _length(corners[3], corners[2])
-    left, right = _length(corners[0], corners[3]), _length(corners[1], corners[2])
+    """Is the camera tilted (one side of the field looks shorter) or the field turned in the image?
+
+    Everything is said in the directions of the image on the screen, because the paper may
+    lie turned under the camera. A field side that looks shorter is further away: the
+    camera does not look straight down, but leans towards that side.
+    """
+    edges = _edges_in_image(corners)
+    top, bottom, left, right = (_length(*edges[side]) for side in ("top", "bottom", "left", "right"))
     vertical = 1 - min(top, bottom) / max(top, bottom)
     horizontal = 1 - min(left, right) / max(left, right)
-    dx, dy = corners[1] - corners[0]
-    turn = float(np.degrees(np.arctan2(dy, dx)))
     if max(vertical, horizontal) > TILT_GOOD:
         if vertical >= horizontal:
-            side = "top" if top < bottom else "bottom"
+            far, near, share = ("top", "bottom", vertical) if top < bottom else ("bottom", "top", vertical)
         else:
-            side = "left" if left < right else "right"
-        level = WARN if max(vertical, horizontal) <= TILT_MAX else BAD
-        return Check("Straight", level, f"{side} edge looks smaller - move camera towards the {side}")
+            far, near, share = ("left", "right", horizontal) if left < right else ("right", "left", horizontal)
+        level = WARN if share <= TILT_MAX else BAD
+        return Check("Straight", level, f"{far} side {share:.0%} smaller - tilt lens a bit to the {near}")
+    dx, dy = edges["top"][1] - edges["top"][0]
+    # The paper may lie turned by 90 degrees under the camera, so only the rest up to 45 degrees counts.
+    turn = (float(np.degrees(np.arctan2(dy, dx))) + 45) % 90 - 45
     if abs(turn) > TURN_GOOD_DEG:
         level = WARN if abs(turn) <= TURN_MAX_DEG else BAD
-        return Check("Straight", level, f"field is turned by {turn:.0f} deg - turn paper or camera")
+        direction = "anticlockwise" if turn > 0 else "clockwise"
+        return Check("Straight", level, f"field turned by {abs(turn):.0f} deg - turn paper {direction}")
     return Check("Straight", OK, "camera looks straight down")
 
 
@@ -270,6 +277,18 @@ def _worst(checks):
     """The worst level of some checks: bad before warn before ok."""
     levels = [check.level for check in checks]
     return BAD if BAD in levels else WARN if WARN in levels else OK
+
+
+def _edges_in_image(corners):
+    """The four field edges named by where they lie on the screen, e.g. {"top": (point, point), ...}.
+
+    Each edge runs from left to right or from top to bottom.
+    """
+    edges = [tuple(sorted((corners[i], corners[(i + 1) % 4]), key=lambda point: (point[0], point[1]))) for i in range(4)]
+    middles = [(first + second) / 2 for first, second in edges]
+    by_y = sorted(range(4), key=lambda i: middles[i][1])
+    by_x = sorted(range(4), key=lambda i: middles[i][0])
+    return {"top": edges[by_y[0]], "bottom": edges[by_y[3]], "left": edges[by_x[0]], "right": edges[by_x[3]]}
 
 
 def _length(first, second):
