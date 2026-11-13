@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import pytest
 
-from objekterkennung.shapes import center_px, classify_shape
+from objekterkennung.detection.shapes import center_px, classify_shape
 
 FIELD_PX = 600
 CUBE_PX = 83

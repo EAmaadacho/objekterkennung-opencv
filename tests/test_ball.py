@@ -3,9 +3,9 @@
 import cv2
 import numpy as np
 
-from objekterkennung.ball import OUTLINE_MATCH_MIN, OUTLINE_TOLERANCE_PX, cut_ball, outline_match, refine_circle
-from objekterkennung.segmentation import split_touching
-from objekterkennung.shapes import classify_shape
+from objekterkennung.detection.ball import OUTLINE_MATCH_MIN, OUTLINE_TOLERANCE_PX, cut_ball, outline_match, refine_circle
+from objekterkennung.detection.segmentation import split_touching
+from objekterkennung.detection.shapes import classify_shape
 
 FIELD_PX = 600
 BALL_RADIUS_PX = 75

@@ -4,6 +4,46 @@ Das Programm erkennt mit einer Webcam Form, Farbe und Position von Holzobjekten 
 
 Entstanden im Modul PALG (Projekt Algorithmen) an der FHDW, Studiengruppe MFAX424A.
 
+## Wo steht was
+
+Das Programm besteht nur aus `main.py` und dem Ordner `objekterkennung/`. Alles andere sind Tests, Hilfsprogramme und Dokumente, die beim Erkennen nicht mitlaufen.
+
+```
+main.py                  Start und Schleife pro Kamerabild
+config.json              Kamera, Spielfeldmaße, Farbbereiche (HSV), Schwellwerte
+objekterkennung/         DAS PROGRAMM
+  config.py              Einstellungen aus config.json lesen
+  capture/               1. Bild holen
+    camera.py              Webcam öffnen, Bild lesen
+    board.py               ArUco-Marker finden, Spielfeld gerade entzerren
+    setup_check.py         Einrichtungsmodus: Kamera und Licht prüfen
+    calibration.py         Kalibriermodus: Farbbereiche mit Schiebereglern einstellen
+  detection/             2. Objekte erkennen
+    segmentation.py        Farbmasken (HSV), berührende Objekte trennen
+    ball.py                Kugel aus berührenden Objekten herausschneiden
+    prism_pair.py          zwei Prismen, die als Quadrat liegen, trennen
+    shapes.py              Form bestimmen: Würfel, Quader, Prisma, Kugel
+    hand.py                Hand im Feld erkennen
+    detector.py            alles zusammen: Farbe, Form, Position jedes Objekts
+  output/                3. Ergebnis zeigen
+    models.py              Datenklasse für ein erkanntes Objekt
+    smoothing.py           Glättung über mehrere Bilder
+    tracker.py             Veränderungen melden (neu, entfernt, verschoben)
+    display.py             Beschriftungen und Statusleiste im Fenster
+    protocol.py            Protokoll der Beschriftungen (Taste p)
+tests/                   automatische Tests mit pytest, eine Datei pro Modul
+tools/                   Hilfsprogramme, nicht Teil des Programmlaufs
+  make_board.py            Spielfeld-PDF aus den Maßen in config.json erzeugen
+  camera_check.py          prüfen, was die Webcam liefert
+  evaluate_tests.py        Protokoll mit vielen Testlagen an den Pausen aufteilen und
+                           jede Lage mit den 12 erwarteten Teilen vergleichen
+assets/                  druckfertiges Spielfeld
+docs/                    Anforderungen A1–A7 mit Verweis auf Code und Tests
+.github/                 CI, führt bei jedem Push alle Tests aus
+```
+
+**Lesereihenfolge:** `main.py` zeigt den Ablauf pro Bild. Danach in der Reihenfolge, in der ein Bild durchs Programm läuft: `capture/board.py` → `detection/detector.py` (ruft `segmentation`, `ball`, `prism_pair` und `shapes` auf) → `output/smoothing.py` → `output/tracker.py` → `output/display.py`.
+
 ## Aufbau vor dem Start
 
 1. `assets/Spielfeld_A4.pdf` auf weißes A4-Papier drucken, mit **100 % / „Tatsächliche Größe“**. Den Feldrahmen mit dem Lineal nachmessen (18 cm) und das Blatt auf Pappe kleben.
@@ -75,19 +115,6 @@ Abweichungen und ihr Grund:
 | `HoughCircles` | Eine Kugel, die an einem gleichfarbigen Quader liegt, verschmilzt mit ihm. Nur ihr runder Umriss trennt sie, denn Würfel mit Seitenflächen sind im Bild genauso dick wie die Kugel. |
 | `setMouseCallback` für die Buttons in der Statusleiste | Das Skript kennt als Bedienung nur Tasten (`waitKey`) und Schieberegler. Die Buttons sind zusätzlich zu den Tasten da, damit man während der Vorführung mit der Maus pausieren und das Protokoll starten kann; jede Funktion bleibt auch über ihre Taste erreichbar. |
 | Kameraeinstellungen (`CAP_DSHOW`, MJPG, Full HD) | Ohne sie liefert die Webcam nur einen gezoomten Ausschnitt in 640 × 480. |
-
-## Aufbau des Repositorys
-
-| Ordner / Datei | Inhalt |
-|---|---|
-| `main.py` | Startpunkt: liest die Einstellungen, öffnet die Kamera und führt die Schleife pro Bild aus. |
-| `config.json` | Kamera, Spielfeldmaße, Farbbereiche (HSV) und Schwellwerte. |
-| [`objekterkennung/`](objekterkennung) | Der Code, ein Modul pro Aufgabe: `config` (Einstellungen), `camera` (Kamera), `board` (Marker finden, Feld entzerren), `segmentation` (Farbmasken, Trennen berührender Objekte), `ball` (Kugel aus berührenden Objekten herausschneiden), `shapes` (Form), `prism_pair` (zwei Prismen als Quadrat trennen), `detector` (Farbe, Form und Position aller Objekte), `smoothing` (Glättung über mehrere Bilder), `tracker` (Veränderungen), `hand` (Hand im Feld erkennen, Meldungen pausieren), `models` (Datenklassen), `display` (Anzeige), `setup_check` (Einrichtungsmodus für Kamera und Licht), `calibration` (Kalibriermodus), `protocol` (Protokoll der Beschriftungen). |
-| [`tests/`](tests) | Automatische Tests mit pytest. |
-| [`tools/`](tools) | Hilfsprogramme, die nicht zum Programmlauf gehören: `make_board.py` erzeugt das Spielfeld-PDF aus den Maßen in `config.json`, `camera_check.py` prüft die Kamera, `evaluate_tests.py` teilt ein Protokoll mit vielen Testlagen an den Pausen auf und vergleicht jede Lage mit den 12 erwarteten Teilen. |
-| [`assets/`](assets) | Das druckfertige Spielfeld. |
-| [`docs/`](docs) | [Anforderungen](docs/anforderungen.md) mit Kennungen A1–A7. |
-| [`.github/`](.github) | CI-Pipeline, die bei jedem Push alle Tests ausführt. |
 
 ## Arbeitsweise
 

@@ -3,8 +3,8 @@
 import cv2
 import numpy as np
 
-from objekterkennung.board import unit_to_pixel
-from objekterkennung.models import SHAPE_LABELS
+from objekterkennung.capture.board import unit_to_pixel
+from objekterkennung.output.models import SHAPE_LABELS
 
 NO_FIELD_TEXT = "Field not found"
 TEXT_COLOR = (0, 0, 255)

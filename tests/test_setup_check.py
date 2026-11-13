@@ -3,9 +3,9 @@
 import cv2
 import numpy as np
 
-from objekterkennung.board import ARUCO_DICTIONARY
+from objekterkennung.capture.board import ARUCO_DICTIONARY
 from objekterkennung.config import load_settings
-from objekterkennung.setup_check import (
+from objekterkennung.capture.setup_check import (
     BAD,
     OK,
     START_BUTTON,

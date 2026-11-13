@@ -11,7 +11,7 @@ sys.path.insert(0, str(PROJECT_FOLDER))
 
 import cv2  # noqa: E402
 
-from objekterkennung.camera import open_camera, read_frame  # noqa: E402
+from objekterkennung.capture.camera import open_camera, read_frame  # noqa: E402
 from objekterkennung.config import load_settings  # noqa: E402
 
 WINDOW_NAME = "Camera check"

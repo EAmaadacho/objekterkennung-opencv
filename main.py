@@ -5,17 +5,17 @@ import sys
 
 import cv2
 
-from objekterkennung.board import find_homography, find_markers, straighten_field
-from objekterkennung.calibration import run_calibration
-from objekterkennung.camera import CameraError, open_camera, read_frame
+from objekterkennung.capture.board import find_homography, find_markers, straighten_field
+from objekterkennung.capture.calibration import run_calibration
+from objekterkennung.capture.camera import CameraError, open_camera, read_frame
 from objekterkennung.config import load_settings
-from objekterkennung.detector import detect_objects
-from objekterkennung.display import add_status_bar, button_at, compose_window, draw_markers, draw_notice, draw_objects
-from objekterkennung.hand import hand_in_field
-from objekterkennung.protocol import LabelProtocol
-from objekterkennung.setup_check import run_setup
-from objekterkennung.smoothing import FrameSmoother
-from objekterkennung.tracker import ChangeTracker
+from objekterkennung.detection.detector import detect_objects
+from objekterkennung.output.display import add_status_bar, button_at, compose_window, draw_markers, draw_notice, draw_objects
+from objekterkennung.detection.hand import hand_in_field
+from objekterkennung.output.protocol import LabelProtocol
+from objekterkennung.capture.setup_check import run_setup
+from objekterkennung.output.smoothing import FrameSmoother
+from objekterkennung.output.tracker import ChangeTracker
 
 WINDOW_NAME = "Object detection"
 HAND_TEXT = "Hand in field - reports paused"

@@ -7,10 +7,10 @@ from dataclasses import replace
 import cv2
 import numpy as np
 
-from objekterkennung.board import find_homography, straighten_field
-from objekterkennung.camera import read_frame
+from objekterkennung.capture.board import find_homography, straighten_field
+from objekterkennung.capture.camera import read_frame
 from objekterkennung.config import COLOR_NAMES, DEFAULT_CONFIG_PATH, load_settings
-from objekterkennung.segmentation import HUE_MAX, color_mask
+from objekterkennung.detection.segmentation import HUE_MAX, color_mask
 
 WINDOW_NAME = "Calibration"
 COLOR_SLIDER = "Colour 0-3"

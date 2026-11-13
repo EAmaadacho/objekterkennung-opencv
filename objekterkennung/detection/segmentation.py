@@ -3,7 +3,7 @@
 import cv2
 import numpy as np
 
-from objekterkennung.ball import cut_ball
+from objekterkennung.detection.ball import cut_ball
 
 # 5 px in the 600 px field is 1.5 mm: big enough to remove noise, too small to eat an object.
 MORPH_KERNEL_PX = 5

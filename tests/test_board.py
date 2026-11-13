@@ -3,7 +3,7 @@
 import cv2
 import numpy as np
 
-from objekterkennung.board import (
+from objekterkennung.capture.board import (
     ARUCO_DICTIONARY,
     find_homography,
     find_markers,

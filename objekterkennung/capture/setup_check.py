@@ -5,9 +5,9 @@ from dataclasses import dataclass
 import cv2
 import numpy as np
 
-from objekterkennung.board import MARKER_IDS, find_homography, find_markers, margin_px, straighten_field
-from objekterkennung.camera import read_frame
-from objekterkennung.display import draw_markers
+from objekterkennung.capture.board import MARKER_IDS, find_homography, find_markers, margin_px, straighten_field
+from objekterkennung.capture.camera import read_frame
+from objekterkennung.output.display import draw_markers
 
 OK = "ok"
 WARN = "warn"

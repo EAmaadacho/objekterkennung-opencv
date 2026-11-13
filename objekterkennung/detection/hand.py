@@ -3,7 +3,7 @@
 import cv2
 import numpy as np
 
-from objekterkennung.segmentation import color_mask
+from objekterkennung.detection.segmentation import color_mask
 
 # Skin and a dark sleeve: a warm hue (red to orange) with some colour, or very dark pixels.
 WARM_HUE_MAX = 25

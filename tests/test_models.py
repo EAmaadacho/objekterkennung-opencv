@@ -2,7 +2,7 @@
 
 import pytest
 
-from objekterkennung.models import SHAPE_NAMES, DetectedObject
+from objekterkennung.output.models import SHAPE_NAMES, DetectedObject
 
 
 def test_A3_label_shows_rounded_coordinates():

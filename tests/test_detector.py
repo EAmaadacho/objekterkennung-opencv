@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 
 from objekterkennung.config import load_settings
-from objekterkennung.detector import detect_objects
+from objekterkennung.detection.detector import detect_objects
 
 # The straight image is the 600 px field plus a 50 px margin on every side.
 FIELD_PX = 700

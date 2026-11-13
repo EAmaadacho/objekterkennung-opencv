@@ -3,8 +3,8 @@
 import cv2
 import numpy as np
 
-from objekterkennung.segmentation import outline_points
-from objekterkennung.shapes import classify_shape
+from objekterkennung.detection.segmentation import outline_points
+from objekterkennung.detection.shapes import classify_shape
 
 # The joint between the two prisms runs along a diagonal of the square, i.e. about
 # 45 degrees to its sides. A few degrees of play allow for an imperfect fit.

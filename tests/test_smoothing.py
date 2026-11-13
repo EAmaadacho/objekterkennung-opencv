@@ -1,7 +1,7 @@
 """Tests for smoothing the detections over several frames."""
 
-from objekterkennung.models import DetectedObject
-from objekterkennung.smoothing import FrameSmoother
+from objekterkennung.output.models import DetectedObject
+from objekterkennung.output.smoothing import FrameSmoother
 
 FRAMES = 10
 RED_PRISM = DetectedObject("prism", "red", 0.50, 0.50)

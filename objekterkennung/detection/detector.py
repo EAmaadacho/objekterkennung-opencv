@@ -1,10 +1,10 @@
 """Finds all objects in the straight field image: colour, shape and position (A1, A2, A3, A5)."""
 
-from objekterkennung.board import pixel_to_unit
-from objekterkennung.models import DetectedObject
-from objekterkennung.prism_pair import split_prism_pair
-from objekterkennung.segmentation import color_mask, split_touching
-from objekterkennung.shapes import center_px, classify_shape
+from objekterkennung.capture.board import pixel_to_unit
+from objekterkennung.output.models import DetectedObject
+from objekterkennung.detection.prism_pair import split_prism_pair
+from objekterkennung.detection.segmentation import color_mask, split_touching
+from objekterkennung.detection.shapes import center_px, classify_shape
 
 
 def detect_objects(field_image, settings):

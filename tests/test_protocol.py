@@ -5,8 +5,8 @@ from datetime import datetime
 
 import numpy as np
 
-from objekterkennung.models import DetectedObject
-from objekterkennung.protocol import LabelProtocol
+from objekterkennung.output.models import DetectedObject
+from objekterkennung.output.protocol import LabelProtocol
 
 RED_CUBE = DetectedObject("cube", "red", 0.40, 0.70)
 RED_CUBOID = DetectedObject("cuboid", "red", 0.40, 0.70)

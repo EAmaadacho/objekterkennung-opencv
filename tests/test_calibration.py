@@ -2,7 +2,7 @@
 
 import json
 
-from objekterkennung.calibration import bounds_from_hue_ranges, hue_ranges_from_bounds, save_colors
+from objekterkennung.capture.calibration import bounds_from_hue_ranges, hue_ranges_from_bounds, save_colors
 from objekterkennung.config import DEFAULT_CONFIG_PATH, load_settings
 
 

@@ -4,8 +4,8 @@ import cv2
 import numpy as np
 import pytest
 
-from objekterkennung import camera
-from objekterkennung.camera import FRAME_HEIGHT, FRAME_WIDTH, CameraError, open_camera, read_frame
+from objekterkennung.capture import camera
+from objekterkennung.capture.camera import FRAME_HEIGHT, FRAME_WIDTH, CameraError, open_camera, read_frame
 
 MISSING_CAMERA_INDEX = 99
 

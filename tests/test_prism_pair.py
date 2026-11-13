@@ -3,8 +3,8 @@
 import cv2
 import numpy as np
 
-from objekterkennung.prism_pair import split_prism_pair
-from objekterkennung.shapes import classify_shape
+from objekterkennung.detection.prism_pair import split_prism_pair
+from objekterkennung.detection.shapes import classify_shape
 
 PAPER = (230, 230, 230)
 BLUE = (200, 80, 20)

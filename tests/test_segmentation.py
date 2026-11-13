@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 
 from objekterkennung.config import load_settings
-from objekterkennung.segmentation import clean_mask, color_mask, split_touching
+from objekterkennung.detection.segmentation import clean_mask, color_mask, split_touching
 
 FIELD_PX = 600
 WHITE = (255, 255, 255)

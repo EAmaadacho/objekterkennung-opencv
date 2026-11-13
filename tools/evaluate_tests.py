@@ -20,7 +20,7 @@ sys.path.insert(0, str(PROJECT_FOLDER))
 
 import cv2  # noqa: E402
 
-from objekterkennung.setup_check import check_light  # noqa: E402
+from objekterkennung.capture.setup_check import check_light  # noqa: E402
 
 # The 12 blocks that lie in the field in every test layout.
 EXPECTED = Counter({

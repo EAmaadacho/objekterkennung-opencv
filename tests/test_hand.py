@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 
 from objekterkennung.config import load_settings
-from objekterkennung.hand import hand_in_field
+from objekterkennung.detection.hand import hand_in_field
 
 FIELD_PX = 600
 WHITE = (235, 225, 220)
