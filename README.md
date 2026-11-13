@@ -50,6 +50,13 @@ docs/                    Anforderungen A1–A7 mit Verweis auf Code und Tests
 2. Eine USB-Webcam etwa 45–50 cm senkrecht über der Mitte des Blatts befestigen. Alle vier Marker müssen im Bild sein.
 3. Eine feste Lampe einschalten; Fensterlicht vermeiden.
 
+So wurde das Programm getestet, und so lässt sich der Aufbau wiederholen:
+
+- Webcam EMEET C960 am Kamera-Arm, etwa 45–50 cm über der Blattmitte, Objektiv parallel zum Blatt.
+- Klemmleuchte auf Stufe 4, seitlich oberhalb; das Papier hat dann im Einrichtungsmodus Helligkeit 155–170 (Licht-Ampel grün).
+- Alle sechs Ampeln im Einrichtungsmodus grün, dann mit Enter starten.
+- Bei anderem Licht oder anderer Kamera einmal `main.py --calibrate` ausführen und die Farbbereiche neu einstellen.
+
 Das Koordinatensystem: (0,0) unten links, x nach rechts, y nach oben, (1,1) oben rechts – so wie auf dem Spielfeld aufgedruckt.
 
 ## Installieren und starten
@@ -80,20 +87,30 @@ Mit `main.py --calibrate` startet der Kalibriermodus: Mit Schiebereglern werden 
 
 Hier steht alles, was sich mit dem Aufbau ändert: Kamera, Blatt, Farben und Licht. Die Schwellen der einzelnen Verfahren (z. B. für Canny) stehen dagegen als benannte Konstanten mit Begründung im Code, weil sie nicht vom Aufbau abhängen. Die Farbwerte stellt man am einfachsten mit dem Kalibriermodus ein (`main.py --calibrate`), er speichert sie hier.
 
+Die Namen im Code sind dieselben wie hier: `settings.colors.min_saturation` ist im Code genau der Wert `colors.min_saturation` aus config.json. So sieht man beim Lesen sofort, woher ein Wert kommt.
+
 | Feld | Bedeutung | Einheit, Wert | Wann ändern? |
 |---|---|---|---|
-| `camera_index` | Welche Kamera benutzt wird: 0 ist meist die eingebaute, 1 die erste USB-Webcam. | Zahl, 1 | Wenn „No camera found“ erscheint oder das falsche Bild kommt. |
-| `board.field_mm` | Seitenlänge des Spielfelds. | mm, 180 | Nur bei einem anders gedruckten Spielfeld. |
-| `board.margin_mm` | Wie viel Papier rund um das Feld im geraden Bild mit gezeigt wird. Dadurch wird ein hoher Stein am Rand noch ganz gesehen, auch wenn die Kamera etwas schräg auf ihn schaut. Erkannt wird nur, was mit seinem Mittelpunkt im Feld liegt. | mm, 15 | Größer, wenn Steine am Rand abgeschnitten werden; höchstens so groß wie Markerabstand + Markergröße. |
-| `board.marker_mm` | Kantenlänge der vier ArUco-Marker. | mm, 30 | Nur bei einem anders gedruckten Spielfeld. |
-| `board.marker_gap_mm` | Abstand der Marker von der Feldlinie. | mm, 8 | Nur bei einem anders gedruckten Spielfeld. |
-| `board.warp_px` | Wie groß das Feld im geraden Bild ist. Mehr Pixel zeigen feinere Kanten, kosten aber Rechenzeit. | Pixel, 600 (≈ 3,3 Pixel pro mm) | Selten; dann auch `min_area_px` anpassen. |
-| `saturation_min` | Mindest-Sättigung pro Farbe: wie kräftig eine Farbe sein muss, um zu zählen. Weißes Papier und graue Schatten liegen darunter. | 0–255, z. B. rot 100 | Höher, wenn Schatten oder Haut als Farbe erkannt werden; niedriger, wenn Steine bei starkem Licht blass werden und fehlen. |
-| `value_min` | Mindest-Helligkeit: dunklere Pixel zählen zu keiner Farbe. | 0–255, 60 | Niedriger, wenn dunkle Steine oder ihre Seitenflächen fehlen. |
-| `hue_ranges` | Farbtonbereich pro Farbe. Rot liegt an beiden Enden der Skala und hat deshalb zwei Bereiche. | 0–180 (OpenCV), z. B. blau 100–130 | Wenn eine Farbe mit einer anderen verwechselt wird; am besten im Kalibriermodus. |
-| `min_area_px` | Kleinste Fläche, die als Objekt zählt; alles Kleinere ist Rauschen. | Pixel im geraden Bild, 3000 (≈ 16 × 16 mm) | Höher, wenn kleine Flecken als Objekt erscheinen. |
-| `stable_frames` | Wie viele Bilder hintereinander eine Änderung gleich bleiben muss, bevor sie gemeldet wird. | Bilder, 10 (≈ 1 s) | Höher, wenn Meldungen flackern; niedriger, wenn sie zu spät kommen. |
-| `move_threshold` | Ab welcher Strecke ein Objekt als verschoben gemeldet wird. | Anteil der Feldbreite, 0.02 (≈ 3,6 mm) | Höher, wenn ruhig liegende Steine als verschoben gemeldet werden. |
+| `camera.number` | Welche Kamera benutzt wird: 0 ist meist die eingebaute, 1 die erste USB-Webcam. | Zahl, 1 | Wenn „No camera found“ erscheint oder das falsche Bild kommt. |
+| `camera.width_px`, `camera.height_px` | Bildgröße, die von der Webcam angefordert wird. | Pixel, 1920 × 1080 | Nur bei einer anderen Webcam. |
+| `board.field_size_mm` | Seitenlänge des Spielfelds. | mm, 180 | Nur bei einem anders gedruckten Spielfeld. |
+| `board.margin_around_field_mm` | Wie viel Papier rund um das Feld im geraden Bild mit gezeigt wird. Dadurch wird ein hoher Stein am Rand noch ganz gesehen, auch wenn die Kamera etwas schräg auf ihn schaut. Erkannt wird nur, was mit seinem Mittelpunkt im Feld liegt. | mm, 15 | Kleiner, wenn am linken oder rechten Bildrand Tisch zu sehen ist: Links und rechts endet das Papier 15 mm neben dem Feld, größer geht dort nicht. |
+| `board.marker_size_mm` | Kantenlänge der vier ArUco-Marker. | mm, 30 | Nur bei einem anders gedruckten Spielfeld. |
+| `board.marker_distance_to_field_mm` | Abstand der Marker von der Feldlinie. | mm, 8 | Nur bei einem anders gedruckten Spielfeld. |
+| `board.field_size_in_image_px` | Wie groß das Feld im geraden Bild ist. Mehr Pixel zeigen feinere Kanten, kosten aber Rechenzeit. | Pixel, 600 (≈ 3,3 Pixel pro mm) | Selten; dann auch `detection.min_object_area_px` anpassen. |
+| `colors.hue_ranges` | Farbtonbereich pro Farbe. Rot liegt an beiden Enden der Skala und hat deshalb zwei Bereiche. | 0–180 (OpenCV), z. B. blau 100–130 | Wenn eine Farbe mit einer anderen verwechselt wird; am besten im Kalibriermodus. |
+| `colors.min_saturation` | Mindest-Sättigung pro Farbe: wie kräftig eine Farbe sein muss, um zu zählen. Weißes Papier und graue Schatten liegen darunter. | 0–255, z. B. rot 100 | Höher, wenn Schatten oder Haut als Farbe erkannt werden; niedriger, wenn Steine bei starkem Licht blass werden und fehlen. |
+| `colors.min_brightness` | Mindest-Helligkeit pro Farbe: dunklere Pixel zählen nicht zu dieser Farbe. Grün liegt niedriger, weil der dunkelgrüne Quader nur Helligkeit 27–54 hat. | 0–255, z. B. grün 45, sonst 60 | Niedriger, wenn dunkle Steine oder ihre Seitenflächen fehlen. |
+| `objects.sphere_diameter_mm` | Durchmesser der Kugeln. Daraus folgt der Radius, nach dem `HoughCircles` sucht. | mm, 46 | Bei anderen Kugeln. |
+| `objects.prism_pair_colors` | Farben, von denen zwei Prismen im Feld liegen. Nur bei ihnen wird geprüft, ob ein Quadrat eigentlich zwei Prismen ist. | Liste, `["blue"]` | Wenn sich die Objektmenge ändert. |
+| `light.paper_brightness_min`, `light.paper_brightness_max` | Zielbereich für die Helligkeit des weißen Papiers im Einrichtungsmodus. In diesem Licht (Lampe Stufe 4) wurden die Farbbereiche eingestellt. | 0–255, 155–170 | Nach einer neuen Kalibrierung bei anderem Licht. |
+| `detection.min_object_area_px` | Kleinste Fläche, die als Objekt zählt; alles Kleinere ist Rauschen. | Pixel im geraden Bild, 3000 (≈ 16 × 16 mm) | Höher, wenn kleine Flecken als Objekt erscheinen. |
+| `changes.frames_until_reported` | Wie viele Bilder hintereinander eine Änderung gleich bleiben muss, bevor sie gemeldet wird. Über genauso viele Bilder wird auch die angezeigte Position geglättet (Median). | Bilder, 10 (≈ 1–1,5 s) | Höher, wenn Meldungen flackern; niedriger, wenn sie zu spät kommen. |
+| `changes.min_move_share_of_field` | Ab welcher Strecke ein Objekt als verschoben gemeldet wird. | Anteil der Feldbreite, 0.02 (≈ 3,6 mm) | Höher, wenn ruhig liegende Steine als verschoben gemeldet werden. |
+
+**Genauigkeit der Position:** Die Kamera sieht hohe Steine am Feldrand leicht von der Seite, ihre Oberseite erscheint dadurch etwas weiter außen. In den Ecken weicht die Position deshalb um bis zu etwa 0,02–0,035 ab, in der Mitte praktisch nicht. Das Programm korrigiert das nicht, weil die Höhe eines Steins aus einem Bild von oben nicht bekannt ist.
+
+**Würfel und Quader:** Beide zählen als eigene Form. Ein Würfel ist von oben ein Quadrat (Seiten 1 : 1), ein Quader ein Rechteck mit Seiten etwa 2,4 : 1. Die Grenze liegt bei 1,5 : 1 (siehe `detection/shapes.py`). Zwei bündig aneinanderliegende gleichfarbige Würfel ergeben von oben ebenfalls ein Rechteck 2 : 1; sie werden nur über die sichtbare Naht zwischen ihnen getrennt (Canny, Watershed).
 
 ## Bedienung
 
@@ -116,11 +133,11 @@ Wo es geht, nutzt das Programm die Verfahren aus dem Vorlesungsskript. Abgewiche
 
 | Schritt | Verfahren | Skript |
 |---|---|---|
-| Bild holen, anzeigen | `VideoCapture`, `imshow`, `waitKey`, `np.hstack` | Kap. 1/2 |
-| Farbe | `cvtColor` nach HSV, `inRange` | Kap. 2.2 |
-| Maske säubern | Öffnen/Schließen (`morphologyEx`), Löcher füllen mit `findContours`/`drawContours` | Kap. 5.2, 6.1 |
+| Bild holen, anzeigen | `VideoCapture`, `imshow`, `waitKey`, `np.hstack` | Kap. 9.1, 2.3, 3.3.6 |
+| Farbe | `cvtColor` nach HSV, `inRange` | Kap. 2.2, 7.2 (Farbsegmentierung) |
+| Maske säubern | Öffnen/Schließen (`morphologyEx`), Löcher füllen mit `findContours`/`drawContours` | Kap. 5.2, Übung 12 (7.2.2), Kap. 6.1 |
 | Kante zwischen Klötzen | `GaussianBlur`, `Canny` (bei großen Flächen ein zweiter, feinerer Durchlauf für schwache Nähte), `erode`/`dilate` | Kap. 4.1, 4.2, 5.1 |
-| Flächen, Form, Position | `findContours`, `contourArea`, `minEnclosingCircle`, `moments`, `boundingRect` | Kap. 6.1 |
+| Flächen, Form, Position | `findContours`, `contourArea`, `moments`, `boundingRect`, `minEnclosingCircle` | Kap. 6.1, 6.1.7–6.1.9 |
 | Zwei Prismen als Quadrat | Ausschnitt (ROI), `getRotationMatrix2D`, `warpAffine`, Helligkeitsprofil | Kap. 3.2, 3.3 |
 | Kalibrierung | Schieberegler (`createTrackbar`) | Kap. 4.3.4 |
 
@@ -130,9 +147,9 @@ Abweichungen und ihr Grund:
 |---|---|
 | ArUco-Marker, `findHomography`, `warpPerspective`, `perspectiveTransform` | Die Kamera schaut leicht schräg auf das Feld. Das Skript kennt nur `warpAffine` (Drehen, Verschieben), das eine schräge Ansicht nicht gerade rücken kann. Der Einrichtungsmodus rechnet mit derselben Homographie die Feldecken zurück ins Kamerabild (`perspectiveTransform`). |
 | `distanceTransform`, `watershed` | Zwei gleichfarbige Würfel, die bündig aneinander liegen, bilden eine einzige Fläche. Erodieren allein trennt sie nicht. |
-| `convexHull`, `minAreaRect` in der Formregel | Die Ecken-Zählung aus Übung 11 (`approxPolyDP`) stimmte auf 1 140 Objekten aus echten Aufnahmen nur zu 62 %, weil die Klötze Seitenflächen und runde Kanten zeigen. |
+| `convexHull`, `minAreaRect` in der Formregel, `minAreaRect` auch beim Trennen und beim Prismenpaar | Die Ecken-Zählung aus Übung 11 (`approxPolyDP`) stimmte auf 1 140 Objekten aus echten Aufnahmen nur zu 62 %, weil die Klötze Seitenflächen und runde Kanten zeigen. |
 | `HoughCircles` | Eine Kugel, die an einem gleichfarbigen Quader liegt, verschmilzt mit ihm. Nur ihr runder Umriss trennt sie, denn Würfel mit Seitenflächen sind im Bild genauso dick wie die Kugel. |
-| `setMouseCallback` für die Buttons in der Statusleiste | Das Skript kennt als Bedienung nur Tasten (`waitKey`) und Schieberegler. Die Buttons sind zusätzlich zu den Tasten da, damit man während der Vorführung mit der Maus pausieren und das Protokoll starten kann; jede Funktion bleibt auch über ihre Taste erreichbar. |
+| `setMouseCallback` für die Buttons in der Statusleiste (nur Komfort) | Das Skript kennt als Bedienung nur Tasten (`waitKey`) und Schieberegler. Die Buttons sind zusätzlich zu den Tasten da, damit man während der Vorführung mit der Maus pausieren und das Protokoll starten kann; jede Funktion bleibt auch über ihre Taste erreichbar. |
 | Kameraeinstellungen (`CAP_DSHOW`, MJPG, Full HD) | Ohne sie liefert die Webcam nur einen gezoomten Ausschnitt in 640 × 480. |
 
 ## Arbeitsweise
