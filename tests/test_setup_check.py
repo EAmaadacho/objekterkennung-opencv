@@ -22,7 +22,7 @@ from objekterkennung.setup_check import (
 PX_PER_MM = 3
 MARGIN_MM = 50
 # Grey paper like under the lamp; pure white 255 would count as glare.
-PAPER = 180
+PAPER = 162
 
 
 def test_A6_straight_centred_board_is_all_green():
@@ -110,6 +110,22 @@ def test_A7_dark_paper_is_too_dark():
     check = check_light(field)
 
     assert check.level == BAD and "too dark" in check.text
+
+
+def test_A7_paper_in_the_target_band_is_ok():
+    field = np.full((640, 640, 3), 162, dtype=np.uint8)
+
+    check = check_light(field)
+
+    assert check.level == OK and "paper 162" in check.text
+
+
+def test_A7_slightly_too_bright_paper_asks_for_one_step_darker():
+    field = np.full((640, 640, 3), 180, dtype=np.uint8)
+
+    check = check_light(field)
+
+    assert check.level == WARN and "one step darker" in check.text
 
 
 def test_A7_shadow_in_one_corner_is_uneven():

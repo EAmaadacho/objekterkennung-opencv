@@ -31,7 +31,12 @@ OFFSET_GOOD = 0.05
 OFFSET_MAX = 0.15
 # Light, measured on the white paper (low saturation) in the straight field.
 PAPER_SATURATION_MAX = 40
-BRIGHTNESS_GOOD = 130
+# Target band for the paper: in the light-level test (13.11.) the paper went from 173 at the
+# strongest to 145 at the weakest lamp level, about 3 grey levels per step. The chosen level 4
+# gave 160-165, and the colour limits in config.json were tuned in this light. 155-170 is about
+# level 2 to 6; a single level cannot be told apart, because the camera adjusts its exposure.
+BRIGHTNESS_GOOD = 155
+BRIGHTNESS_GOOD_MAX = 170
 BRIGHTNESS_MIN = 90
 BRIGHTNESS_TOO_HIGH = 235
 # The darkest of 3 x 3 field parts compared with the brightest one.
@@ -190,16 +195,18 @@ def check_light(field_image):
     text = f"paper {brightness:.0f}, even {evenness:.0%}, glare {glare:.0%}"
     if brightness < BRIGHTNESS_MIN or evenness < EVENNESS_MIN or glare > GLARE_MAX:
         level = BAD
-    elif brightness < BRIGHTNESS_GOOD or brightness > BRIGHTNESS_TOO_HIGH or evenness < EVENNESS_GOOD or glare > GLARE_GOOD:
+    elif brightness < BRIGHTNESS_GOOD or brightness > BRIGHTNESS_GOOD_MAX or evenness < EVENNESS_GOOD or glare > GLARE_GOOD:
         level = WARN
     else:
         return Check("Light", OK, text)
     if brightness < BRIGHTNESS_GOOD:
-        hint = "lamp brighter (too dark)"
+        hint = f"lamp brighter (too dark, target paper {BRIGHTNESS_GOOD}-{BRIGHTNESS_GOOD_MAX})"
     elif glare > GLARE_GOOD or brightness > BRIGHTNESS_TOO_HIGH:
         hint = "lamp darker or higher (glare)"
-    else:
+    elif evenness < EVENNESS_GOOD:
         hint = "lamp more to the middle (uneven)"
+    else:
+        hint = f"lamp one step darker (target paper {BRIGHTNESS_GOOD}-{BRIGHTNESS_GOOD_MAX})"
     return Check("Light", level, f"{text} - {hint}")
 
 
