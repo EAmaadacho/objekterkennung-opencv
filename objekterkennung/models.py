@@ -3,6 +3,8 @@
 from dataclasses import dataclass
 
 SHAPE_NAMES = ("cube", "cuboid", "prism", "sphere", "unknown")
+# Words for the output. "prism" alone would also fit a cube, so the prism is called triangular.
+SHAPE_LABELS = {"cube": "cube", "cuboid": "cuboid", "prism": "triangular prism", "sphere": "sphere", "unknown": "unknown"}
 
 
 @dataclass(frozen=True)
@@ -19,12 +21,16 @@ class DetectedObject:
     y: float
 
     def name(self):
-        """Name for the output, e.g. "red cube"."""
-        return f"{self.color} {self.shape}"
+        """Name for the output, e.g. "red cube" or "blue triangular prism"."""
+        return f"{self.color} {SHAPE_LABELS[self.shape]}"
 
     def position(self):
         """Rounded position for the output, e.g. "(0.42 | 0.71)"."""
         return f"({self.x:.2f} | {self.y:.2f})"
+
+    def compact_position(self):
+        """Short position for the label on the object, e.g. "(0.42|0.71)"."""
+        return f"({self.x:.2f}|{self.y:.2f})"
 
     def label(self):
         """Name and position, e.g. "red cube (0.42 | 0.71)"."""

@@ -4,11 +4,19 @@ import cv2
 import numpy as np
 
 from objekterkennung.board import unit_to_pixel
+from objekterkennung.models import SHAPE_LABELS
 
 NO_FIELD_TEXT = "Field not found"
 TEXT_COLOR = (0, 0, 255)
 MARKER_COLOR = (0, 255, 0)
-LABEL_COLOR = (0, 0, 0)
+LABEL_COLOR = (255, 255, 255)
+# Label on the object: white text on a dark, half transparent box is readable on every colour.
+LABEL_BOX_COLOR = (30, 30, 30)
+LABEL_BOX_ALPHA = 0.65
+LABEL_SCALE = 0.42
+LABEL_LINE_PX = 15
+LABEL_PADDING_PX = 4
+DOT_GAP_PX = 10
 DOT_COLOR = (255, 0, 255)
 # Wider windows do not fit on a laptop screen; the camera image is shrunk instead of the field.
 MAX_WINDOW_WIDTH = 1400
@@ -67,16 +75,35 @@ def _fit(image, max_height, max_width):
 
 
 def draw_objects(field_image, objects, board):
-    """Marks every detected object in a copy of the straight field: a dot at its centre and its label."""
+    """Labels every detected object in a copy of the straight field, centred on the object itself.
+
+    The label is a small dark box with white text, so it can be read on every colour:
+    colour and shape above the centre, a dot at the measured centre, the position below.
+    The box is half transparent, so the colour of the object still shows through.
+    """
     result = field_image.copy()
     for item in objects:
         center = unit_to_pixel(item.x, item.y, board)
-        cv2.circle(result, center, 5, DOT_COLOR, -1)
-        lines = [item.name(), item.position()]
-        for line_number, line in enumerate(lines):
-            origin = (center[0] - 40, center[1] + 22 + 18 * line_number)
-            cv2.putText(result, line, origin, cv2.FONT_HERSHEY_SIMPLEX, 0.5, LABEL_COLOR, 1, cv2.LINE_AA)
+        above = [item.color, SHAPE_LABELS.get(item.shape, item.shape)]
+        below = [item.compact_position()]
+        sizes = [cv2.getTextSize(line, cv2.FONT_HERSHEY_SIMPLEX, LABEL_SCALE, 1)[0] for line in above + below]
+        half_width = max(width for width, _ in sizes) // 2 + LABEL_PADDING_PX
+        top = center[1] - len(above) * LABEL_LINE_PX - DOT_GAP_PX // 2 - LABEL_PADDING_PX
+        bottom = center[1] + len(below) * LABEL_LINE_PX + DOT_GAP_PX // 2 + LABEL_PADDING_PX
+        box = (slice(max(top, 0), max(bottom, 0)), slice(max(center[0] - half_width, 0), max(center[0] + half_width, 0)))
+        result[box] = (result[box] * (1 - LABEL_BOX_ALPHA) + np.array(LABEL_BOX_COLOR) * LABEL_BOX_ALPHA).astype(np.uint8)
+        for number, line in enumerate(above):
+            _put_centred(result, line, center[0], top + LABEL_PADDING_PX + (number + 1) * LABEL_LINE_PX - 3)
+        for number, line in enumerate(below):
+            _put_centred(result, line, center[0], center[1] + DOT_GAP_PX // 2 + (number + 1) * LABEL_LINE_PX - 3)
+        cv2.circle(result, center, 4, DOT_COLOR, -1)
     return result
+
+
+def _put_centred(image, text, center_x, baseline_y):
+    """Writes white text so that its middle lies at center_x."""
+    (width, _), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, LABEL_SCALE, 1)
+    cv2.putText(image, text, (center_x - width // 2, baseline_y), cv2.FONT_HERSHEY_SIMPLEX, LABEL_SCALE, LABEL_COLOR, 1, cv2.LINE_AA)
 
 
 def draw_notice(image, text):
