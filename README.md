@@ -54,7 +54,7 @@ So wurde das Programm getestet, und so lässt sich der Aufbau wiederholen:
 
 - Webcam EMEET C960 am Kamera-Arm, etwa 45–50 cm über der Blattmitte, Objektiv parallel zum Blatt.
 - Klemmleuchte auf Stufe 4, seitlich oberhalb; das Papier hat dann im Einrichtungsmodus Helligkeit 155–170 (Licht-Ampel grün).
-- Alle sechs Ampeln im Einrichtungsmodus grün, dann mit Enter starten.
+- Alle fünf Ampeln im Einrichtungsmodus grün, dann mit Enter starten.
 - Bei anderem Licht oder anderer Kamera einmal `main.py --calibrate` ausführen und die Farbbereiche neu einstellen.
 
 Das Koordinatensystem: (0,0) unten links, x nach rechts, y nach oben, (1,1) oben rechts – so wie auf dem Spielfeld aufgedruckt.
@@ -79,7 +79,17 @@ python3 -m venv .venv
 .venv/bin/python main.py
 ```
 
-Nach dem Start kommt zuerst der **Einrichtungsmodus**. Er prüft live sechs Punkte und zeigt sie als Ampeln: Sind alle 4 Marker zu sehen? Füllt das Feld genug vom Bild (Ziel: mindestens die Hälfte der Bildhöhe)? Schaut die Kamera gerade von oben (gegenüberliegende Feldseiten gleich lang, Feld nicht verdreht)? Liegt das Feld in der Bildmitte? Ist das Papier im Zielbereich 155–170 (Helligkeit 0–255; in diesem Licht wurden die Farbbereiche eingestellt), gleichmäßig ausgeleuchtet und ohne überbelichtete Stellen? Glänzen die Steine (dafür ein paar Steine ins Feld legen)? Zu jeder gelben oder roten Ampel steht, was zu tun ist, z. B. „move camera lower“. Ein Fadenkreuz und ein Zielrahmen helfen beim Ausrichten. Durch die Mitte des erkannten Felds läuft ein zweites Kreuz in der Farbe des Feldrahmens; liegt es auf dem grauen Fadenkreuz, hängt die Kamera genau über der Feldmitte. Eine Wasserwaage in der Bildmitte zeigt die Neigung der Kamera: Der Punkt wandert in die Richtung, in die die Kamera schaut, und muss in den grünen Ring. Mit Enter oder dem Button START beginnt die Erkennung; `main.py --skip-setup` überspringt den Modus.
+Nach dem Start kommt zuerst der **Einrichtungsmodus**. Er prüft live fünf Punkte und zeigt sie als Ampeln: Sind alle 4 Marker zu sehen? Füllt das Feld genug vom Bild (Ziel: mindestens 35 % der Bildhöhe)? Schaut die Kamera gerade von oben (gegenüberliegende Feldseiten gleich lang, Feld nicht verdreht)? Liegt das Feld in der Bildmitte? Ist das Papier im Zielbereich 155–170 (Helligkeit 0–255; in diesem Licht wurden die Farbbereiche eingestellt), gleichmäßig ausgeleuchtet und ohne überbelichtete Stellen? Zu jeder gelben oder roten Ampel steht, was zu tun ist, z. B. „move camera lower“. Ein Fadenkreuz und ein Zielrahmen helfen beim Ausrichten. Durch die Mitte des erkannten Felds läuft ein zweites Kreuz in der Farbe des Feldrahmens; liegt es auf dem grauen Fadenkreuz, hängt die Kamera genau über der Feldmitte. Eine Wasserwaage in der Bildmitte zeigt die Neigung der Kamera: Der Punkt wandert in die Richtung, in die die Kamera schaut, und muss in den grünen Ring. Mit Enter oder dem Button START beginnt die Erkennung; `main.py --skip-setup` überspringt den Modus.
+
+Was „grün“ bedeutet, ist an den Testaufnahmen vom 12. und 13.11. geprüft:
+
+| Ampel | Grün, wenn | Beleg aus den Aufnahmen |
+|---|---|---|
+| Markers | alle 4 Marker gefunden | Ohne sie kann das Feld nicht entzerrt werden. |
+| Size | Feld ≥ 35 % der Bildhöhe | Der Testaufbau erreichte 36–38 %; damit wurden bei grünem Licht 97 % der Teile richtig erkannt. |
+| Straight | Neigung ≤ 5 %, Drehung ≤ 2° | Am 13.11. immer erfüllt (etwa 1 %); 5 % verschieben die Oberseite eines Würfels nur um etwa 4 mm. |
+| Centre | Feldmitte ≤ 5 % neben der Bildmitte | Am 12.11. lag das Feld zu weit unten, ein blaues Prisma am Rand erschien abgeschnitten. |
+| Light | Papier 155–170, Gleichmäßigkeit ≥ 65 % | Gleiche Lage, gleiche Software: bei Papier 171 wurden 0 von 16 roten Würfeln erkannt, eine Lampenstufe dunkler (155–161) 18 von 18. Über alle Bilder vom 13.11.: bei grünem Licht 97 % der Teile richtig, sonst 90 %. |
 
 Mit `main.py --calibrate` startet der Kalibriermodus: Mit Schiebereglern werden die Farbbereiche an das Licht angepasst und in `config.json` gespeichert.
 

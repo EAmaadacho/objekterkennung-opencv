@@ -12,8 +12,8 @@ from objekterkennung.capture.setup_check import (
     WINDOW_MAX_WIDTH,
     camera_lean,
     check_light,
-    check_piece_glare,
     check_setup,
+    check_size,
     draw_setup,
     field_centre_lines,
     is_start_click,
@@ -30,12 +30,12 @@ def test_A6_straight_centred_board_is_all_green():
     settings = load_settings()
     board = settings.board
     frame = _draw_board(board)
-    # One block in the field, so the glare check has something to measure.
+    # One block in the field, like in a real setup.
     cv2.rectangle(frame, (400, 400), (480, 480), (40, 30, 210), -1)
 
     checks, corners = check_setup(frame, settings)
 
-    assert [check.level for check in checks] == [OK, OK, OK, OK, OK, OK]
+    assert [check.level for check in checks] == [OK, OK, OK, OK, OK]
     assert corners is not None
 
 
@@ -135,6 +135,25 @@ def test_A7_slightly_too_bright_paper_asks_for_one_step_darker():
     assert check.level == WARN and "one step darker" in check.text
 
 
+def test_A7_slightly_uneven_light_still_counts_as_good():
+    # 70 % evenness: in the recordings such light caused no error.
+    field = np.full((640, 640, 3), 165, dtype=np.uint8)
+    field[:213, :213] = 116
+
+    check = check_light(field, load_settings().light)
+
+    assert check.level == OK
+
+
+def test_A6_field_filling_36_percent_of_the_image_is_good():
+    # The test setup reached 36-38 % of the image height and found 97 % of the blocks.
+    corners = np.float32([[800, 346], [1189, 346], [1189, 735], [800, 735]])
+
+    check = check_size(corners, (1080, 1920, 3))
+
+    assert check.level == OK
+
+
 def test_A7_shadow_in_one_corner_is_uneven():
     field = np.full((640, 640, 3), 180, dtype=np.uint8)
     field[:213, :213] = 100
@@ -142,24 +161,6 @@ def test_A7_shadow_in_one_corner_is_uneven():
     check = check_light(field, load_settings().light)
 
     assert check.level == BAD and "uneven" in check.text
-
-
-def test_A7_glare_on_a_block_is_found():
-    field = np.full((700, 700, 3), 180, dtype=np.uint8)
-    cv2.rectangle(field, (300, 300), (400, 400), (200, 90, 30), -1)
-    cv2.circle(field, (350, 350), 15, (255, 255, 255), -1)
-
-    check = check_piece_glare(field)
-
-    assert check.level == BAD and "glare on blocks" in check.text
-
-
-def test_A7_empty_field_asks_for_blocks():
-    field = np.full((700, 700, 3), 180, dtype=np.uint8)
-
-    check = check_piece_glare(field)
-
-    assert check.level == WARN and "put some blocks" in check.text
 
 
 def test_A6_setup_view_fits_the_screen_and_has_a_start_button():

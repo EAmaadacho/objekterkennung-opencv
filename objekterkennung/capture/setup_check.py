@@ -1,4 +1,4 @@
-"""Setup mode before the start: checks markers, size, straightness, position, light and glare on the blocks live (A6, A7)."""
+"""Setup mode before the start: checks markers, size, straightness, position and light live (A6, A7)."""
 
 from dataclasses import dataclass
 
@@ -23,8 +23,11 @@ LEVEL_COLORS = {OK: (0, 200, 0), WARN: (0, 200, 255), BAD: (70, 70, 255)}
 # below the field in the image, it can fill at most 70 % (180 of 256 mm) before a marker
 # leaves the image; with the paper turned by 90 degrees they lie left and right, and the
 # field can fill more. Above SIZE_MAX a block at the edge of the field leaves the image.
-SIZE_GOOD = 0.5
-SIZE_MIN = 0.35
+# The setup used for all tests reached 36-38 % (camera arm at its lowest); with that and a
+# green light, 97 % of the blocks were found (13.11.). Below 25 % a cube is less than 25 px
+# wide in the camera image and the seam between two flush blocks disappears.
+SIZE_GOOD = 0.35
+SIZE_MIN = 0.25
 SIZE_MAX = 0.78
 # Straight: opposite field edges may differ by this share in length, the field may be turned this much.
 # With the camera about 47 cm above the field, 5 % is a lean of about 7 degrees: the tops of
@@ -46,8 +49,10 @@ OFFSET_MAX = 0.15
 PAPER_SATURATION_MAX = 40
 BRIGHTNESS_MIN = 90
 BRIGHTNESS_TOO_HIGH = 235
-# The darkest of 3 x 3 field parts compared with the brightest one.
-EVENNESS_GOOD = 0.75
+# The darkest of 3 x 3 field parts compared with the brightest one. In the recordings even
+# 61 % caused no error that came from the light (a pale block in a dark corner), so yellow
+# starts only at 65 %.
+EVENNESS_GOOD = 0.65
 EVENNESS_MIN = 0.6
 # Share of overexposed pixels (brightness 250 or more): there a block loses its colour.
 GLARE_VALUE = 250
@@ -56,14 +61,6 @@ GLARE_MAX = 0.05
 GRID_PARTS = 3
 # Radius of the spirit level around the image centre; its outer ring stands for TILT_MAX.
 LEVEL_RADIUS_PX = 70
-# Glare on the blocks: a block is every coloured pixel; around it this many pixels are counted
-# as the block too, because a reflection has almost no colour and leaves a hole or a bright rim.
-PIECE_SATURATION_MIN = 60
-PIECE_GROW_PX = 9
-PIECE_PIXELS_MIN = 2000
-PIECE_GLARE_GOOD = 0.01
-PIECE_GLARE_MAX = 0.03
-
 WINDOW_MAX_WIDTH = 1400
 WINDOW_MAX_HEIGHT = 760
 PANEL_WIDTH = 440
@@ -83,13 +80,13 @@ class Check:
 
 
 def check_setup(frame, settings):
-    """Runs all six checks on one camera image; returns the checks and the field corners in the image (or None)."""
+    """Runs all five checks on one camera image; returns the checks and the field corners in the image (or None)."""
     markers = find_markers(frame)
     found = [marker_id for marker_id in MARKER_IDS if marker_id in markers]
     if len(found) < len(MARKER_IDS):
         missing = ", ".join(str(marker_id) for marker_id in MARKER_IDS if marker_id not in found)
         checks = [Check("Markers", BAD, f"{len(found)} of 4 found - missing: {missing}")]
-        checks += [Check(name, BAD, "needs all 4 markers") for name in ("Size", "Straight", "Centre", "Light", "Glare")]
+        checks += [Check(name, BAD, "needs all 4 markers") for name in ("Size", "Straight", "Centre", "Light")]
         return checks, None
     board = settings.board
     homography = find_homography(frame, board)
@@ -101,7 +98,7 @@ def check_setup(frame, settings):
         check_centre(corners, frame.shape),
     ]
     field_image = straighten_field(frame, homography, board)
-    checks += [check_light(field_image, settings.light), check_piece_glare(field_image)]
+    checks.append(check_light(field_image, settings.light))
     return checks, corners
 
 
@@ -239,27 +236,8 @@ def check_light(field_image, light):
     return Check("Light", level, f"{text} - {hint}")
 
 
-def check_piece_glare(field_image):
-    """Share of overexposed pixels on the blocks; some blocks must lie in the field for this check.
-
-    Overexposed pixels have lost their colour, so the colour masks miss them and a
-    block looks smaller or falls apart.
-    """
-    hsv = cv2.cvtColor(field_image, cv2.COLOR_BGR2HSV)
-    coloured = np.where(hsv[:, :, 1] >= PIECE_SATURATION_MIN, 255, 0).astype(np.uint8)
-    pieces = cv2.dilate(coloured, np.ones((PIECE_GROW_PX, PIECE_GROW_PX), np.uint8)) > 0
-    if np.count_nonzero(pieces) < PIECE_PIXELS_MIN:
-        return Check("Glare", WARN, "no blocks found - put some blocks in the field")
-    glare = float(np.mean(hsv[:, :, 2][pieces] >= GLARE_VALUE))
-    text = f"glare on blocks {glare:.1%}"
-    if glare <= PIECE_GLARE_GOOD:
-        return Check("Glare", OK, text)
-    level = WARN if glare <= PIECE_GLARE_MAX else BAD
-    return Check("Glare", level, f"{text} - lamp higher, darker or more to the side")
-
-
 def draw_setup(frame, checks, corners):
-    """A panel with the six traffic lights on the left, the camera image with guide lines on the right.
+    """A panel with the five traffic lights on the left, the camera image with guide lines on the right.
 
     The panel is placed next to the image (np.hstack), so it never hides the field.
     """
