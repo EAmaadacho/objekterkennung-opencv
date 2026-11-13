@@ -11,6 +11,7 @@ from objekterkennung.setup_check import (
     START_BUTTON,
     WARN,
     WINDOW_MAX_WIDTH,
+    camera_lean,
     check_light,
     check_piece_glare,
     check_setup,
@@ -71,6 +72,15 @@ def test_A6_tilted_camera_is_found():
     checks, _ = check_setup(tilted, board)
 
     assert checks[2].level in (WARN, BAD) and "top side" in checks[2].text and "to the bottom" in checks[2].text
+
+
+def test_A6_spirit_level_points_to_the_shorter_side():
+    corners = np.float32([[110, 100], [190, 100], [200, 200], [100, 200]])
+
+    lean_x, lean_y = camera_lean(corners)
+
+    assert lean_x == 0
+    assert lean_y < 0
 
 
 def test_A6_paper_turned_by_90_degrees_counts_as_straight():

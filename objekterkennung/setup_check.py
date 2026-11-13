@@ -19,8 +19,10 @@ SIZE_GOOD = 0.5
 SIZE_MIN = 0.35
 SIZE_MAX = 0.78
 # Straight: opposite field edges may differ by this share in length, the field may be turned this much.
-TILT_GOOD = 0.03
-TILT_MAX = 0.08
+# 5 % is a lean of about 2-3 degrees: the tops of the blocks shift by less than 2 mm, and the
+# webcam lens alone bends the field edges by 1-2 %, so a stricter limit could not be reached.
+TILT_GOOD = 0.05
+TILT_MAX = 0.1
 TURN_GOOD_DEG = 2
 TURN_MAX_DEG = 6
 # Centre: distance of the field centre from the image centre, as a share of the image size.
@@ -40,6 +42,8 @@ GLARE_VALUE = 250
 GLARE_GOOD = 0.01
 GLARE_MAX = 0.05
 GRID_PARTS = 3
+# Radius of the spirit level around the image centre; its outer ring stands for TILT_MAX.
+LEVEL_RADIUS_PX = 70
 # Glare on the blocks: a block is every coloured pixel; around it this many pixels are counted
 # as the block too, because a reflection has almost no colour and leaves a hole or a bright rim.
 PIECE_SATURATION_MIN = 60
@@ -119,14 +123,13 @@ def check_straight(corners):
     camera does not look straight down, but leans towards that side.
     """
     edges = _edges_in_image(corners)
-    top, bottom, left, right = (_length(*edges[side]) for side in ("top", "bottom", "left", "right"))
-    vertical = 1 - min(top, bottom) / max(top, bottom)
-    horizontal = 1 - min(left, right) / max(left, right)
+    lean_x, lean_y = camera_lean(corners)
+    horizontal, vertical = abs(lean_x), abs(lean_y)
     if max(vertical, horizontal) > TILT_GOOD:
         if vertical >= horizontal:
-            far, near, share = ("top", "bottom", vertical) if top < bottom else ("bottom", "top", vertical)
+            far, near, share = ("top", "bottom", vertical) if lean_y < 0 else ("bottom", "top", vertical)
         else:
-            far, near, share = ("left", "right", horizontal) if left < right else ("right", "left", horizontal)
+            far, near, share = ("left", "right", horizontal) if lean_x < 0 else ("right", "left", horizontal)
         level = WARN if share <= TILT_MAX else BAD
         return Check("Straight", level, f"{far} side {share:.0%} smaller - tilt lens a bit to the {near}")
     dx, dy = edges["top"][1] - edges["top"][0]
@@ -137,6 +140,18 @@ def check_straight(corners):
         direction = "anticlockwise" if turn > 0 else "clockwise"
         return Check("Straight", level, f"field turned by {abs(turn):.0f} deg - turn paper {direction}")
     return Check("Straight", OK, "camera looks straight down")
+
+
+def camera_lean(corners):
+    """In which direction and how much the camera leans, in image directions, e.g. (0.0, -0.03).
+
+    The side the camera leans towards is further away and looks shorter. x > 0 means it
+    leans to the right (the right side is shorter), y < 0 that it leans up (the top side
+    is shorter). (0, 0) means the camera looks straight down.
+    """
+    edges = _edges_in_image(corners)
+    top, bottom, left, right = (_length(*edges[side]) for side in ("top", "bottom", "left", "right"))
+    return (left - right) / max(left, right), (top - bottom) / max(top, bottom)
 
 
 def check_centre(corners, shape):
@@ -223,7 +238,8 @@ def draw_setup(frame, checks, corners):
     cv2.rectangle(image, (width // 2 - half, height // 2 - half), (width // 2 + half, height // 2 + half), guide, 1)
     if corners is not None:
         worst = _worst(checks[1:4])
-        cv2.polylines(image, [np.int32(corners * scale)], True, LEVEL_COLORS[worst], 3)
+        cv2.drawContours(image, [np.int32(corners * scale)], -1, LEVEL_COLORS[worst], 3)
+        _draw_level(image, camera_lean(corners))
     panel = np.full((height, PANEL_WIDTH, 3), 40, dtype=np.uint8)
     cv2.putText(panel, "SETUP: camera and light", (20, 32), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2)
     for number, check in enumerate(checks):
@@ -243,6 +259,29 @@ def draw_setup(frame, checks, corners):
     cv2.putText(panel, note, (left, bottom + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
     cv2.putText(panel, "q = quit", (left, bottom + 55), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
     return np.hstack([panel, image])
+
+
+def _draw_level(image, lean):
+    """A spirit level around the image centre: the dot shows where the camera leans.
+
+    The dot moves the same way as the lens when the camera is tilted. Inside the
+    small green ring the camera looks straight down (TILT_GOOD), the outer ring is TILT_MAX.
+    """
+    centre = (image.shape[1] // 2, image.shape[0] // 2)
+    good = round(LEVEL_RADIUS_PX * TILT_GOOD / TILT_MAX)
+    cv2.circle(image, centre, LEVEL_RADIUS_PX, LEVEL_COLORS[WARN], 2)
+    cv2.circle(image, centre, good, LEVEL_COLORS[OK], 2)
+    # The dot stays on the outer ring when the camera leans even more.
+    x = float(np.clip(lean[0] / TILT_MAX, -1, 1))
+    y = float(np.clip(lean[1] / TILT_MAX, -1, 1))
+    length = max(1.0, float(np.hypot(x, y)))
+    dot = (round(centre[0] + LEVEL_RADIUS_PX * x / length), round(centre[1] + LEVEL_RADIUS_PX * y / length))
+    level = OK if max(abs(lean[0]), abs(lean[1])) <= TILT_GOOD else WARN if max(abs(lean[0]), abs(lean[1])) <= TILT_MAX else BAD
+    cv2.circle(image, dot, 10, LEVEL_COLORS[level], -1)
+    cv2.circle(image, dot, 10, (0, 0, 0), 1)
+    left, top = centre[0] - 105, centre[1] + LEVEL_RADIUS_PX + 6
+    image[top : top + 24, left : left + 210] = (40, 40, 40)
+    cv2.putText(image, "tilt: dot into green ring", (left + 6, top + 17), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
 
 
 def is_start_click(x, y):
