@@ -13,6 +13,7 @@ from objekterkennung.detector import detect_objects
 from objekterkennung.display import add_status_bar, button_at, compose_window, draw_markers, draw_notice, draw_objects
 from objekterkennung.hand import hand_in_field
 from objekterkennung.protocol import LabelProtocol
+from objekterkennung.setup_check import run_setup
 from objekterkennung.smoothing import FrameSmoother
 from objekterkennung.tracker import ChangeTracker
 
@@ -53,11 +54,14 @@ def _run(arguments):
     objects = []
     paused = False
     clicks = []
-    cv2.namedWindow(WINDOW_NAME)
-    # OpenCV calls this function for every mouse event in the window; a left click is kept for the loop.
-    cv2.setMouseCallback(WINDOW_NAME, lambda event, x, y, flags, param: _remember_click(event, x, y, clicks))
-    print("Started. Keys: p = protocol on/off, u = pause on/off, c = calibration, q = quit")
     try:
+        # First the setup mode, so camera and light are checked before anything is detected.
+        if not arguments.skip_setup and not run_setup(capture, settings.board, WINDOW_NAME):
+            return
+        cv2.namedWindow(WINDOW_NAME)
+        # OpenCV calls this function for every mouse event in the window; a left click is kept for the loop.
+        cv2.setMouseCallback(WINDOW_NAME, lambda event, x, y, flags, param: _remember_click(event, x, y, clicks))
+        print("Started. Keys: p = protocol on/off, u = pause on/off, c = calibration, q = quit")
         while True:
             frame = read_frame(capture)
             homography = find_homography(frame, settings.board, last_homography=homography)
@@ -114,6 +118,7 @@ def _parse_arguments():
     """Reads the command line: "python main.py --calibrate" starts with the calibration mode."""
     parser = argparse.ArgumentParser(description="Detects shape, colour and position of the objects on the field.")
     parser.add_argument("--calibrate", action="store_true", help="open the calibration mode first")
+    parser.add_argument("--skip-setup", action="store_true", help="start the detection without the setup mode")
     return parser.parse_args()
 
 

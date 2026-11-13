@@ -9,8 +9,8 @@ Die Anforderungen stammen aus der Aufgabenstellung „PALG: Anwendung OpenCV“ 
 | A3 | Die Position wird im Einheitsquadrat (0,0)–(1,1) ausgegeben und ist mit dem aufgedruckten Raster überprüfbar. | `board.py`, `tools/make_board.py` | `test_board.py`, `test_config.py` |
 | A4 | Veränderungen (neu, entfernt, verschoben) werden automatisch erkannt und gemeldet. | `smoothing.py`, `tracker.py`, `hand.py` | `test_smoothing.py`, `test_tracker.py`, `test_hand.py` |
 | A5 | Objekte, die sich berühren, werden getrennt erkannt. | `segmentation.py`, `ball.py`, `prism_pair.py` | `test_segmentation.py`, `test_ball.py`, `test_prism_pair.py`, `test_detector.py` |
-| A6 | Live-Bild einer Kamera; keine Netzwerkkommunikation zur Laufzeit; keine LLMs zur Erkennung. | `camera.py`, `display.py`, `main.py` | `test_camera.py`, `test_display.py` |
-| A7 | Kamera, Farbbereiche und Schwellwerte sind ohne Codeänderung einstellbar (config.json, Kalibriermodus). | `config.py`, `calibration.py` | `test_config.py`, `test_calibration.py` |
+| A6 | Live-Bild einer Kamera; keine Netzwerkkommunikation zur Laufzeit; keine LLMs zur Erkennung. | `camera.py`, `display.py`, `setup_check.py`, `main.py` | `test_camera.py`, `test_display.py`, `test_setup_check.py` |
+| A7 | Kamera, Farbbereiche und Schwellwerte sind ohne Codeänderung einstellbar (config.json, Kalibriermodus). | `config.py`, `calibration.py`, `setup_check.py` | `test_config.py`, `test_calibration.py`, `test_setup_check.py` |
 
 ## Objektmenge
 
