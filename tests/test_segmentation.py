@@ -9,6 +9,7 @@ from objekterkennung.detection.segmentation import (
     color_mask,
     split_touching,
 )
+from objekterkennung.detection.shapes import classify_shape
 
 FIELD_PX = 600
 WHITE = (255, 255, 255)
@@ -177,6 +178,30 @@ def test_A5_tiny_specks_are_dropped():
     objects = split_touching(mask, load_settings())
 
     assert objects == []
+
+
+def test_A5_cuboid_gets_back_the_strip_hidden_by_the_ball():
+    # The ball covers a 22 px strip of the cuboid's left side, as seen by the camera.
+    mask = np.zeros((FIELD_PX, FIELD_PX), dtype=np.uint8)
+    cv2.rectangle(mask, (250, 200), (330, 393), 255, -1)
+    cv2.circle(mask, (195, 240), 77, 255, -1)
+
+    objects = split_touching(mask, load_settings())
+
+    cuboid = [piece for piece in objects if classify_shape(piece) == "cuboid"]
+    assert sorted(classify_shape(piece) for piece in objects) == ["cuboid", "sphere"]
+    assert cuboid[0][240, 255] == 255
+
+
+def test_A5_prism_next_to_the_ball_is_not_filled_up_to_a_square():
+    # The ball lies in the open corner of the prism's square, like in the test recordings.
+    mask = np.zeros((FIELD_PX, FIELD_PX), dtype=np.uint8)
+    cv2.fillPoly(mask, [np.array([[200, 200], [200, 330], [330, 330]], np.int32)], 255)
+    cv2.circle(mask, (330, 200), 77, 255, -1)
+
+    objects = split_touching(mask, load_settings())
+
+    assert sorted(classify_shape(piece) for piece in objects) == ["prism", "sphere"]
 
 
 def test_A2_red_sphere_counts_as_red_and_yellow_cuboid_as_yellow():

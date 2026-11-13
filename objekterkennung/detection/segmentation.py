@@ -3,7 +3,8 @@
 import cv2
 import numpy as np
 
-from objekterkennung.detection.ball import cut_ball
+from objekterkennung.detection.ball import CUT_MARGIN_PX, cut_ball
+from objekterkennung.detection.shapes import CUBOID_ASPECT_MIN
 
 # 5 px in the 600 px field is 1.5 mm: big enough to remove noise, too small to eat an object.
 MORPH_KERNEL_PX = 5
@@ -31,6 +32,15 @@ EDGE_SEED_MIN_WIDTH_PX = 40
 # A visible side face is also darker than the top face: under the lamp it reaches only about
 # 60 % of the top's brightness, while two touching top faces are about equally bright.
 SIDE_FACE_BRIGHTNESS_MAX = 0.8
+# Around a cut-out ball lies a gap of CUT_MARGIN_PX (ball.py); the area hidden by the
+# ball is taken a bit larger than that, so a block next to it touches it.
+HIDDEN_KERNEL = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * CUT_MARGIN_PX + 3, 2 * CUT_MARGIN_PX + 3))
+# The ball is higher than the blocks, so the camera sees it a little from the side and it can
+# hide a strip of a block next to it: at most about 46 mm x 127 mm / 480 mm = 12 mm at the corner
+# of the field (ball height x distance from the field centre / camera height). In the recordings
+# the hidden strips of the green cuboid were up to 26 px (8 mm) wide; wider gaps under a ball
+# were the open half of a prism's rectangle.
+HIDDEN_STRIP_MAX_PX = 30
 
 
 def color_mask(field_image, color, settings):
@@ -92,7 +102,10 @@ def split_touching(mask, settings, field_image=None):
         if ball is not None:
             objects.append(ball)
             # The rest may still hold several blocks, so it goes through the same steps.
-            objects.extend(split_touching(clean_mask(rest), settings, field_image))
+            # Each block then gets back what the ball hides of it.
+            hidden = cv2.dilate(ball, HIDDEN_KERNEL)
+            for piece in split_touching(clean_mask(rest), settings, field_image):
+                objects.append(_add_hidden_part(piece, hidden))
             continue
         seeds = None if edges is None else _edge_seeds(part, edges, field_image)
         count = 0 if seeds is None else len(areas(seeds))
@@ -107,6 +120,33 @@ def split_touching(mask, settings, field_image=None):
         else:
             objects.extend(_split_one_part(part, min_area_px))
     return objects
+
+
+def _add_hidden_part(piece, hidden):
+    """Gives a cuboid back the narrow strip that the ball in front of it hides.
+
+    Seen from above, the ball can cover an edge or a corner of a block next to it.
+    The rest of the block then has a round bite and can look like a prism. A cuboid is a
+    rectangle from above, so the smallest rectangle around its visible part
+    (cv2.minAreaRect) shows where it lies; the pixels of that
+    rectangle under the ball are added to it again. Two cases are left as they are:
+    a rectangle that is about square, because a prism is half of a square and its
+    open half must stay open, and a missing part wider than HIDDEN_STRIP_MAX_PX.
+    """
+    if not np.any(cv2.dilate(piece, HIDDEN_KERNEL) & hidden):
+        return piece
+    rectangle_box = cv2.minAreaRect(outline_points(piece))
+    (_, _), (width, height), _ = rectangle_box
+    if max(width, height) < CUBOID_ASPECT_MIN * min(width, height):
+        return piece
+    corners = cv2.boxPoints(rectangle_box)
+    rectangle = np.zeros_like(piece)
+    cv2.fillPoly(rectangle, [np.round(corners).astype(np.int32)], 255)
+    added = rectangle & hidden & ~piece
+    # The distance transform gives half the width of the added part at its widest place.
+    if 2 * cv2.distanceTransform(added, cv2.DIST_L2, 5).max() > HIDDEN_STRIP_MAX_PX:
+        return piece
+    return piece | added
 
 
 def _edges(field_image, low, high):
