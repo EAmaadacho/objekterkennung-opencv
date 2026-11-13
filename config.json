@@ -2,6 +2,7 @@
   "camera_index": 1,
   "board": {
     "field_mm": 180,
+    "margin_mm": 15,
     "marker_mm": 30,
     "marker_gap_mm": 8,
     "warp_px": 600

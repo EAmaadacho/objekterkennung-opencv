@@ -1,5 +1,7 @@
 """Tests for finding the board and straightening the field; the board is drawn with cv2."""
 
+from dataclasses import replace
+
 import cv2
 import numpy as np
 
@@ -7,6 +9,7 @@ from objekterkennung.capture.board import (
     ARUCO_DICTIONARY,
     find_homography,
     find_markers,
+    margin_px,
     pixel_to_unit,
     straighten_field,
     unit_to_pixel,
@@ -59,6 +62,13 @@ def test_A3_no_markers_and_no_history_gives_none():
     homography = find_homography(empty, board)
 
     assert homography is None
+
+
+def test_A7_margin_comes_from_config():
+    board = load_settings().board
+
+    assert board.margin_mm == 15 and margin_px(board) == 50
+    assert margin_px(replace(board, margin_mm=6)) == 20
 
 
 def test_A3_pixel_to_unit_flips_y():

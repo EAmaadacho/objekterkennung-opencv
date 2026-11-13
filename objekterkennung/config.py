@@ -17,6 +17,7 @@ class Board:
     marker_mm: float
     marker_gap_mm: float
     warp_px: int
+    margin_mm: float = 15
 
     def marker_centers_mm(self):
         """Centre of every ArUco marker, measured from the top-left corner of the field.

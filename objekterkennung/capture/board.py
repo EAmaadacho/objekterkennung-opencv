@@ -6,11 +6,6 @@ import numpy as np
 # The same marker family that tools/make_board.py prints on the board.
 ARUCO_DICTIONARY = cv2.aruco.DICT_4X4_50
 MARKER_IDS = (0, 1, 2, 3)
-# The straight image shows 15 mm of paper around the field as well, so a block at the edge is
-# still seen whole: seen from the camera, the top of a high block lies a bit further out than
-# its base. Above and below, the margin reaches 7 mm into the markers. They are black and white,
-# so no colour mask finds them, and their strip is far smaller than a hand.
-FIELD_MARGIN_MM = 15
 
 
 def find_markers(image):
@@ -50,8 +45,14 @@ def straighten_field(image, homography, board):
 
 
 def margin_px(board):
-    """Width of the paper margin around the field in the straight image, e.g. 50 px."""
-    return round(FIELD_MARGIN_MM * board.warp_px / board.field_mm)
+    """Width of the paper margin around the field in the straight image, e.g. 50 px for margin_mm 15.
+
+    The straight image shows some paper around the field as well, so a block at the edge is
+    still seen whole: seen from the camera, the top of a high block lies a bit further out than
+    its base. With 15 mm the margin reaches 7 mm into the markers above and below. They are black
+    and white, so no colour mask finds them, and their strip is far smaller than a hand.
+    """
+    return round(board.margin_mm * board.warp_px / board.field_mm)
 
 
 def field_image_size(board):
@@ -87,7 +88,7 @@ def _marker_corners_px(board, marker_id):
     the image. That is fine: they only serve as reference points.
     """
     scale = board.warp_px / board.field_mm
-    shift_mm = FIELD_MARGIN_MM
+    shift_mm = board.margin_mm
     center_x, center_y = board.marker_centers_mm()[marker_id]
     half = board.marker_mm / 2
     corners_mm = [

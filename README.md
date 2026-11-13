@@ -76,6 +76,25 @@ Nach dem Start kommt zuerst der **Einrichtungsmodus**. Er prüft live sechs Punk
 
 Mit `main.py --calibrate` startet der Kalibriermodus: Mit Schiebereglern werden die Farbbereiche an das Licht angepasst und in `config.json` gespeichert.
 
+## Einstellungen in config.json
+
+Hier steht alles, was sich mit dem Aufbau ändert: Kamera, Blatt, Farben und Licht. Die Schwellen der einzelnen Verfahren (z. B. für Canny) stehen dagegen als benannte Konstanten mit Begründung im Code, weil sie nicht vom Aufbau abhängen. Die Farbwerte stellt man am einfachsten mit dem Kalibriermodus ein (`main.py --calibrate`), er speichert sie hier.
+
+| Feld | Bedeutung | Einheit, Wert | Wann ändern? |
+|---|---|---|---|
+| `camera_index` | Welche Kamera benutzt wird: 0 ist meist die eingebaute, 1 die erste USB-Webcam. | Zahl, 1 | Wenn „No camera found“ erscheint oder das falsche Bild kommt. |
+| `board.field_mm` | Seitenlänge des Spielfelds. | mm, 180 | Nur bei einem anders gedruckten Spielfeld. |
+| `board.margin_mm` | Wie viel Papier rund um das Feld im geraden Bild mit gezeigt wird. Dadurch wird ein hoher Stein am Rand noch ganz gesehen, auch wenn die Kamera etwas schräg auf ihn schaut. Erkannt wird nur, was mit seinem Mittelpunkt im Feld liegt. | mm, 15 | Größer, wenn Steine am Rand abgeschnitten werden; höchstens so groß wie Markerabstand + Markergröße. |
+| `board.marker_mm` | Kantenlänge der vier ArUco-Marker. | mm, 30 | Nur bei einem anders gedruckten Spielfeld. |
+| `board.marker_gap_mm` | Abstand der Marker von der Feldlinie. | mm, 8 | Nur bei einem anders gedruckten Spielfeld. |
+| `board.warp_px` | Wie groß das Feld im geraden Bild ist. Mehr Pixel zeigen feinere Kanten, kosten aber Rechenzeit. | Pixel, 600 (≈ 3,3 Pixel pro mm) | Selten; dann auch `min_area_px` anpassen. |
+| `saturation_min` | Mindest-Sättigung pro Farbe: wie kräftig eine Farbe sein muss, um zu zählen. Weißes Papier und graue Schatten liegen darunter. | 0–255, z. B. rot 100 | Höher, wenn Schatten oder Haut als Farbe erkannt werden; niedriger, wenn Steine bei starkem Licht blass werden und fehlen. |
+| `value_min` | Mindest-Helligkeit: dunklere Pixel zählen zu keiner Farbe. | 0–255, 60 | Niedriger, wenn dunkle Steine oder ihre Seitenflächen fehlen. |
+| `hue_ranges` | Farbtonbereich pro Farbe. Rot liegt an beiden Enden der Skala und hat deshalb zwei Bereiche. | 0–180 (OpenCV), z. B. blau 100–130 | Wenn eine Farbe mit einer anderen verwechselt wird; am besten im Kalibriermodus. |
+| `min_area_px` | Kleinste Fläche, die als Objekt zählt; alles Kleinere ist Rauschen. | Pixel im geraden Bild, 3000 (≈ 16 × 16 mm) | Höher, wenn kleine Flecken als Objekt erscheinen. |
+| `stable_frames` | Wie viele Bilder hintereinander eine Änderung gleich bleiben muss, bevor sie gemeldet wird. | Bilder, 10 (≈ 1 s) | Höher, wenn Meldungen flackern; niedriger, wenn sie zu spät kommen. |
+| `move_threshold` | Ab welcher Strecke ein Objekt als verschoben gemeldet wird. | Anteil der Feldbreite, 0.02 (≈ 3,6 mm) | Höher, wenn ruhig liegende Steine als verschoben gemeldet werden. |
+
 ## Bedienung
 
 Über dem Bild liegt eine Statusleiste mit drei Buttons für die Maus: Protokoll, Pause und Beenden. Läuft das Protokoll, ist sein Button rot („REC“). Während einer Pause ist der Pause-Button orange und das ganze Fenster orange umrandet. Daneben steht in Worten, was das Programm gerade tut („LIVE“ oder „PAUSED“). Jeder Button hat auch eine Taste:
