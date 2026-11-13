@@ -62,13 +62,13 @@ def test_A6_markers_are_drawn_without_changing_the_original():
 
 def test_A3_detected_object_is_marked_at_its_position():
     board = load_settings().board
-    field = np.full((640, 640, 3), 255, dtype=np.uint8)
+    field = np.full((700, 700, 3), 255, dtype=np.uint8)
     cube = DetectedObject("cube", "green", 0.5, 0.75)
 
     result = draw_objects(field, [cube], board)
 
-    # 0.5 | 0.75 lies at pixel (320, 170): 20 px margin plus 300 and 150 px in the 600 px field.
-    assert tuple(result[170, 320]) == DOT_COLOR
+    # 0.5 | 0.75 lies at pixel (350, 200): 50 px margin plus 300 and 150 px in the 600 px field.
+    assert tuple(result[200, 350]) == DOT_COLOR
     assert (field == 255).all()
 
 

@@ -32,7 +32,7 @@ python3 -m venv .venv
 .venv/bin/python main.py
 ```
 
-Nach dem Start kommt zuerst der **Einrichtungsmodus**, am besten mit leerem Feld. Er prüft live fünf Punkte und zeigt sie als Ampeln: Sind alle 4 Marker zu sehen? Füllt das Feld genug vom Bild (Ziel: mindestens die Hälfte der Bildhöhe)? Schaut die Kamera gerade von oben (gegenüberliegende Feldseiten gleich lang, Feld nicht verdreht)? Liegt das Feld in der Bildmitte? Ist das Papier hell genug, gleichmäßig ausgeleuchtet und ohne überbelichtete Stellen? Zu jeder gelben oder roten Ampel steht, was zu tun ist, z. B. „move camera lower“. Ein Fadenkreuz und ein Zielrahmen helfen beim Ausrichten. Mit Enter oder dem Button START beginnt die Erkennung; `main.py --skip-setup` überspringt den Modus.
+Nach dem Start kommt zuerst der **Einrichtungsmodus**. Er prüft live sechs Punkte und zeigt sie als Ampeln: Sind alle 4 Marker zu sehen? Füllt das Feld genug vom Bild (Ziel: mindestens die Hälfte der Bildhöhe)? Schaut die Kamera gerade von oben (gegenüberliegende Feldseiten gleich lang, Feld nicht verdreht)? Liegt das Feld in der Bildmitte? Ist das Papier hell genug, gleichmäßig ausgeleuchtet und ohne überbelichtete Stellen? Glänzen die Steine (dafür ein paar Steine ins Feld legen)? Zu jeder gelben oder roten Ampel steht, was zu tun ist, z. B. „move camera lower“. Ein Fadenkreuz und ein Zielrahmen helfen beim Ausrichten. Mit Enter oder dem Button START beginnt die Erkennung; `main.py --skip-setup` überspringt den Modus.
 
 Mit `main.py --calibrate` startet der Kalibriermodus: Mit Schiebereglern werden die Farbbereiche an das Licht angepasst und in `config.json` gespeichert.
 

@@ -12,6 +12,7 @@ from objekterkennung.setup_check import (
     WARN,
     WINDOW_MAX_WIDTH,
     check_light,
+    check_piece_glare,
     check_setup,
     draw_setup,
     is_start_click,
@@ -26,10 +27,12 @@ PAPER = 180
 def test_A6_straight_centred_board_is_all_green():
     board = load_settings().board
     frame = _draw_board(board)
+    # One block in the field, so the glare check has something to measure.
+    cv2.rectangle(frame, (400, 400), (480, 480), (40, 30, 210), -1)
 
     checks, corners = check_setup(frame, board)
 
-    assert [check.level for check in checks] == [OK, OK, OK, OK, OK]
+    assert [check.level for check in checks] == [OK, OK, OK, OK, OK, OK]
     assert corners is not None
 
 
@@ -85,6 +88,24 @@ def test_A7_shadow_in_one_corner_is_uneven():
     check = check_light(field)
 
     assert check.level == BAD and "uneven" in check.text
+
+
+def test_A7_glare_on_a_block_is_found():
+    field = np.full((700, 700, 3), 180, dtype=np.uint8)
+    cv2.rectangle(field, (300, 300), (400, 400), (200, 90, 30), -1)
+    cv2.circle(field, (350, 350), 15, (255, 255, 255), -1)
+
+    check = check_piece_glare(field)
+
+    assert check.level == BAD and "glare on blocks" in check.text
+
+
+def test_A7_empty_field_asks_for_blocks():
+    field = np.full((700, 700, 3), 180, dtype=np.uint8)
+
+    check = check_piece_glare(field)
+
+    assert check.level == WARN and "put some blocks" in check.text
 
 
 def test_A6_setup_view_fits_the_screen_and_has_a_start_button():

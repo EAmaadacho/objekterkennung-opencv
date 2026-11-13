@@ -6,9 +6,11 @@ import numpy as np
 # The same marker family that tools/make_board.py prints on the board.
 ARUCO_DICTIONARY = cv2.aruco.DICT_4X4_50
 MARKER_IDS = (0, 1, 2, 3)
-# The straight image shows 6 mm of paper around the field as well, so a block that sticks
-# out a little over the edge is still seen whole. 6 mm stays clear of the markers 8 mm away.
-FIELD_MARGIN_MM = 6
+# The straight image shows 15 mm of paper around the field as well, so a block at the edge is
+# still seen whole: seen from the camera, the top of a high block lies a bit further out than
+# its base. Above and below, the margin reaches 7 mm into the markers. They are black and white,
+# so no colour mask finds them, and their strip is far smaller than a hand.
+FIELD_MARGIN_MM = 15
 
 
 def find_markers(image):
@@ -42,18 +44,18 @@ def find_homography(image, board, last_homography=None):
 
 
 def straighten_field(image, homography, board):
-    """Cuts out the field with its margin and turns it into a square, e.g. 640 x 640 pixels for warp_px 600."""
+    """Cuts out the field with its margin and turns it into a square, e.g. 700 x 700 pixels for warp_px 600."""
     size = field_image_size(board)
     return cv2.warpPerspective(image, homography, (size, size))
 
 
 def margin_px(board):
-    """Width of the paper margin around the field in the straight image, e.g. 20 px."""
+    """Width of the paper margin around the field in the straight image, e.g. 50 px."""
     return round(FIELD_MARGIN_MM * board.warp_px / board.field_mm)
 
 
 def field_image_size(board):
-    """Side length of the straight image: the field plus the margin on both sides, e.g. 640 px."""
+    """Side length of the straight image: the field plus the margin on both sides, e.g. 700 px."""
     return board.warp_px + 2 * margin_px(board)
 
 
@@ -61,7 +63,7 @@ def pixel_to_unit(pixel_x, pixel_y, board):
     """Converts a pixel of the straight image into unit-square coordinates.
 
     The margin is taken off first. The image y axis points down, the field y axis
-    points up, so y is flipped: pixel (320, 170) with a 20 px margin is (0.5, 0.75).
+    points up, so y is flipped: pixel (350, 200) with a 50 px margin is (0.5, 0.75).
     """
     size = board.warp_px
     margin = margin_px(board)
@@ -71,7 +73,7 @@ def pixel_to_unit(pixel_x, pixel_y, board):
 def unit_to_pixel(x, y, board):
     """The way back from unit-square coordinates to a pixel of the straight image.
 
-    (0.5, 0.75) is pixel (320, 170) for a 600 px field with a 20 px margin.
+    (0.5, 0.75) is pixel (350, 200) for a 600 px field with a 50 px margin.
     """
     size = board.warp_px
     margin = margin_px(board)

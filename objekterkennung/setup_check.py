@@ -1,4 +1,4 @@
-"""Setup mode before the start: checks markers, size, straightness, position and light of the camera view live (A6, A7)."""
+"""Setup mode before the start: checks markers, size, straightness, position, light and glare on the blocks live (A6, A7)."""
 
 from dataclasses import dataclass
 
@@ -19,13 +19,14 @@ SIZE_GOOD = 0.5
 SIZE_MIN = 0.35
 SIZE_MAX = 0.78
 # Straight: opposite field edges may differ by this share in length, the field may be turned this much.
-TILT_GOOD = 0.05
-TILT_MAX = 0.12
-TURN_GOOD_DEG = 3
-TURN_MAX_DEG = 10
+TILT_GOOD = 0.03
+TILT_MAX = 0.08
+TURN_GOOD_DEG = 2
+TURN_MAX_DEG = 6
 # Centre: distance of the field centre from the image centre, as a share of the image size.
-OFFSET_GOOD = 0.08
-OFFSET_MAX = 0.2
+# Strict, because a camera beside the middle shifts the tops of high blocks outwards.
+OFFSET_GOOD = 0.05
+OFFSET_MAX = 0.15
 # Light, measured on the white paper (low saturation) in the straight field.
 PAPER_SATURATION_MAX = 40
 BRIGHTNESS_GOOD = 130
@@ -39,11 +40,18 @@ GLARE_VALUE = 250
 GLARE_GOOD = 0.01
 GLARE_MAX = 0.05
 GRID_PARTS = 3
+# Glare on the blocks: a block is every coloured pixel; around it this many pixels are counted
+# as the block too, because a reflection has almost no colour and leaves a hole or a bright rim.
+PIECE_SATURATION_MIN = 60
+PIECE_GROW_PX = 9
+PIECE_PIXELS_MIN = 2000
+PIECE_GLARE_GOOD = 0.01
+PIECE_GLARE_MAX = 0.03
 
 WINDOW_MAX_WIDTH = 1400
 WINDOW_MAX_HEIGHT = 760
 PANEL_WIDTH = 440
-LINE_HEIGHT = 34
+LINE_HEIGHT = 30
 START_BUTTON = (20, 430, 300, 470)  # left, top, right, bottom in the window
 START_KEYS = (13, 10)  # Enter on Windows and Linux
 QUIT_KEY = "q"
@@ -59,13 +67,13 @@ class Check:
 
 
 def check_setup(frame, board):
-    """Runs all five checks on one camera image; returns the checks and the field corners in the image (or None)."""
+    """Runs all six checks on one camera image; returns the checks and the field corners in the image (or None)."""
     markers = find_markers(frame)
     found = [marker_id for marker_id in MARKER_IDS if marker_id in markers]
     if len(found) < len(MARKER_IDS):
         missing = ", ".join(str(marker_id) for marker_id in MARKER_IDS if marker_id not in found)
         checks = [Check("Markers", BAD, f"{len(found)} of 4 found - missing: {missing}")]
-        checks += [Check(name, BAD, "needs all 4 markers") for name in ("Size", "Straight", "Centre", "Light")]
+        checks += [Check(name, BAD, "needs all 4 markers") for name in ("Size", "Straight", "Centre", "Light", "Glare")]
         return checks, None
     homography = find_homography(frame, board)
     corners = field_corners(homography, board)
@@ -74,8 +82,9 @@ def check_setup(frame, board):
         check_size(corners, frame.shape),
         check_straight(corners),
         check_centre(corners, frame.shape),
-        check_light(straighten_field(frame, homography, board)),
     ]
+    field_image = straighten_field(frame, homography, board)
+    checks += [check_light(field_image), check_piece_glare(field_image)]
     return checks, corners
 
 
@@ -170,6 +179,25 @@ def check_light(field_image):
     else:
         hint = "lamp more to the middle (uneven)"
     return Check("Light", level, f"{text} - {hint}")
+
+
+def check_piece_glare(field_image):
+    """Share of overexposed pixels on the blocks; some blocks must lie in the field for this check.
+
+    Overexposed pixels have lost their colour, so the colour masks miss them and a
+    block looks smaller or falls apart.
+    """
+    hsv = cv2.cvtColor(field_image, cv2.COLOR_BGR2HSV)
+    coloured = np.where(hsv[:, :, 1] >= PIECE_SATURATION_MIN, 255, 0).astype(np.uint8)
+    pieces = cv2.dilate(coloured, np.ones((PIECE_GROW_PX, PIECE_GROW_PX), np.uint8)) > 0
+    if np.count_nonzero(pieces) < PIECE_PIXELS_MIN:
+        return Check("Glare", WARN, "no blocks found - put some blocks in the field")
+    glare = float(np.mean(hsv[:, :, 2][pieces] >= GLARE_VALUE))
+    text = f"glare on blocks {glare:.1%}"
+    if glare <= PIECE_GLARE_GOOD:
+        return Check("Glare", OK, text)
+    level = WARN if glare <= PIECE_GLARE_MAX else BAD
+    return Check("Glare", level, f"{text} - lamp higher, darker or more to the side")
 
 
 def draw_setup(frame, checks, corners):

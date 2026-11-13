@@ -43,3 +43,16 @@ def test_A4_empty_field_has_no_hand():
 
 def _empty_field():
     return np.full((FIELD_PX, FIELD_PX, 3), WHITE, dtype=np.uint8)
+
+
+def test_A4_marker_strips_in_the_margin_are_no_hand():
+    # The 15 mm margin shows the lower 7 mm of the markers above and the upper 7 mm below the field.
+    settings = load_settings()
+    field = np.full((700, 700, 3), 180, dtype=np.uint8)
+    for left in (50, 550):
+        field[0:23, left : left + 100] = 0
+        field[677:700, left : left + 100] = 0
+
+    hand = hand_in_field(field, settings)
+
+    assert not hand
