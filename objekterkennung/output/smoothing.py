@@ -1,12 +1,14 @@
 """Smooths the detections over the last frames, so a single unclear frame changes nothing (A1, A4)."""
 
 import math
+import statistics
 from collections import Counter, deque
 from dataclasses import replace
 
 # 0.05 is 9 mm on the 180 mm field: a block that jitters by a few pixels stays the same object.
 SAME_OBJECT_DISTANCE = 0.05
-# An object must be seen in at least half of the remembered frames.
+# An object must be seen in more than half of the remembered frames. "More than" matters:
+# right after a block was moved, its old and new place are each seen in exactly half.
 MIN_SHARE = 0.5
 
 
@@ -14,7 +16,9 @@ class FrameSmoother:
     """Remembers the objects of the last frames and returns the objects seen in most of them.
 
     Each object gets the shape that was found most often, e.g. "prism" in 8 of
-    10 frames and "cube" in 2 gives "prism". The position comes from the newest frame.
+    10 frames and "cube" in 2 gives "prism", and the median of its positions. The median
+    ignores single outliers, so the shown position and label stay calm when the camera
+    shakes slightly or the border of a block flickers by a pixel.
     """
 
     def __init__(self, frames):
@@ -35,9 +39,11 @@ class FrameSmoother:
         needed = MIN_SHARE * len(self._history)
         result = []
         for group in groups:
-            if len(group) >= needed:
+            if len(group) > needed:
                 shape = Counter(item.shape for item in group).most_common(1)[0][0]
-                result.append(replace(group[0], shape=shape))
+                x = statistics.median(item.x for item in group)
+                y = statistics.median(item.y for item in group)
+                result.append(replace(group[0], shape=shape, x=x, y=y))
         return result
 
 

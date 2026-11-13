@@ -67,8 +67,8 @@ def test_A3_no_markers_and_no_history_gives_none():
 def test_A7_margin_comes_from_config():
     board = load_settings().board
 
-    assert board.margin_mm == 15 and margin_px(board) == 50
-    assert margin_px(replace(board, margin_mm=6)) == 20
+    assert board.margin_around_field_mm == 15 and margin_px(board) == 50
+    assert margin_px(replace(board, margin_around_field_mm=6)) == 20
 
 
 def test_A3_pixel_to_unit_flips_y():
@@ -89,20 +89,20 @@ def test_A3_unit_to_pixel_is_the_way_back():
 
 def _draw_board(board, red_dot_at=None):
     """Draws the board like the printed page: white paper, four markers around the field."""
-    size_mm = board.field_mm + 2 * MARGIN_MM
+    size_mm = board.field_size_mm + 2 * MARGIN_MM
     image = np.full((size_mm * PX_PER_MM, size_mm * PX_PER_MM, 3), WHITE, dtype=np.uint8)
     dictionary = cv2.aruco.getPredefinedDictionary(ARUCO_DICTIONARY)
-    marker_px = int(board.marker_mm * PX_PER_MM)
+    marker_px = int(board.marker_size_mm * PX_PER_MM)
     for marker_id, (center_x, center_y) in board.marker_centers_mm().items():
         marker = cv2.aruco.generateImageMarker(dictionary, marker_id, marker_px)
-        left = int((MARGIN_MM + center_x - board.marker_mm / 2) * PX_PER_MM)
-        top = int((MARGIN_MM + center_y - board.marker_mm / 2) * PX_PER_MM)
+        left = int((MARGIN_MM + center_x - board.marker_size_mm / 2) * PX_PER_MM)
+        top = int((MARGIN_MM + center_y - board.marker_size_mm / 2) * PX_PER_MM)
         image[top : top + marker_px, left : left + marker_px] = cv2.cvtColor(marker, cv2.COLOR_GRAY2BGR)
     if red_dot_at is not None:
         x, y = red_dot_at
         center = (
-            int((MARGIN_MM + x * board.field_mm) * PX_PER_MM),
-            int((MARGIN_MM + (1 - y) * board.field_mm) * PX_PER_MM),
+            int((MARGIN_MM + x * board.field_size_mm) * PX_PER_MM),
+            int((MARGIN_MM + (1 - y) * board.field_size_mm) * PX_PER_MM),
         )
         cv2.circle(image, center, 15, RED, -1)
     return image

@@ -39,25 +39,25 @@ def find_homography(image, board, last_homography=None):
 
 
 def straighten_field(image, homography, board):
-    """Cuts out the field with its margin and turns it into a square, e.g. 700 x 700 pixels for warp_px 600."""
+    """Cuts out the field with its margin and turns it into a square, e.g. 700 x 700 pixels for field_size_in_image_px 600."""
     size = field_image_size(board)
     return cv2.warpPerspective(image, homography, (size, size))
 
 
 def margin_px(board):
-    """Width of the paper margin around the field in the straight image, e.g. 50 px for margin_mm 15.
+    """Width of the paper margin around the field in the straight image, e.g. 50 px for margin_around_field_mm 15.
 
     The straight image shows some paper around the field as well, so a block at the edge is
     still seen whole: seen from the camera, the top of a high block lies a bit further out than
     its base. With 15 mm the margin reaches 7 mm into the markers above and below. They are black
     and white, so no colour mask finds them, and their strip is far smaller than a hand.
     """
-    return round(board.margin_mm * board.warp_px / board.field_mm)
+    return round(board.margin_around_field_mm * board.field_size_in_image_px / board.field_size_mm)
 
 
 def field_image_size(board):
     """Side length of the straight image: the field plus the margin on both sides, e.g. 700 px."""
-    return board.warp_px + 2 * margin_px(board)
+    return board.field_size_in_image_px + 2 * margin_px(board)
 
 
 def pixel_to_unit(pixel_x, pixel_y, board):
@@ -66,7 +66,7 @@ def pixel_to_unit(pixel_x, pixel_y, board):
     The margin is taken off first. The image y axis points down, the field y axis
     points up, so y is flipped: pixel (350, 200) with a 50 px margin is (0.5, 0.75).
     """
-    size = board.warp_px
+    size = board.field_size_in_image_px
     margin = margin_px(board)
     return (pixel_x - margin) / size, 1 - (pixel_y - margin) / size
 
@@ -76,7 +76,7 @@ def unit_to_pixel(x, y, board):
 
     (0.5, 0.75) is pixel (350, 200) for a 600 px field with a 50 px margin.
     """
-    size = board.warp_px
+    size = board.field_size_in_image_px
     margin = margin_px(board)
     return round(x * size) + margin, round((1 - y) * size) + margin
 
@@ -87,10 +87,10 @@ def _marker_corners_px(board, marker_id):
     Markers lie outside the field, so some values are negative or larger than
     the image. That is fine: they only serve as reference points.
     """
-    scale = board.warp_px / board.field_mm
-    shift_mm = board.margin_mm
+    scale = board.field_size_in_image_px / board.field_size_mm
+    shift_mm = board.margin_around_field_mm
     center_x, center_y = board.marker_centers_mm()[marker_id]
-    half = board.marker_mm / 2
+    half = board.marker_size_mm / 2
     corners_mm = [
         (center_x - half, center_y - half),
         (center_x + half, center_y - half),

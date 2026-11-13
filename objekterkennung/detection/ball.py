@@ -3,10 +3,12 @@
 import cv2
 import numpy as np
 
-# The balls are 45 mm wide, i.e. a radius of about 75 px in the 600 px field (180 mm).
-# The range allows for the camera height: the top of the ball is closer and looks bigger.
-BALL_RADIUS_MIN_PX = 65
-BALL_RADIUS_MAX_PX = 90
+# The radius of the sphere in pixels comes from config.json ("objects": "sphere_diameter_mm"),
+# e.g. 46 mm / 2 x 3.33 px/mm = 77 px. HoughCircles searches a range around it: the sphere is
+# closer to the camera than the paper and looks up to about 15 % bigger, and its shadowed lower
+# edge can make it look smaller.
+RADIUS_MIN_SHARE = 0.85
+RADIUS_MAX_SHARE = 1.17
 # Share of the circle along which the outline of the area really runs. A ball that
 # touches one or two blocks still shows most of its round outline (0.74 to 0.86 in
 # the test recordings); circles found in blocks reached at most 0.47.
@@ -22,17 +24,22 @@ REFINE_GRID_STEP_PX = 3
 ANGLES = np.linspace(0, 2 * np.pi, 360, endpoint=False)
 
 
-def cut_ball(part):
+def cut_ball(part, sphere_radius_px):
     """Returns (ball mask, rest of the area); (None, part) if there is no ball in the area.
 
     cv2.HoughCircles looks for circles of ball size along the edge of the mask.
     A circle only counts as a ball if the outline of the area follows it for most
     of its length, because a circle can also be fitted into the corner of a cube.
     """
+    # The mask is blurred first, so its stair-step edge gives smooth gradients (script ch. 4.1).
+    # HoughCircles: dp=2 counts votes at half resolution, which tolerates a slightly dented
+    # outline; minDist=120 px allows only one ball per area, because each colour has one sphere;
+    # param1=100 is the upper Canny threshold on the blurred 0/255 mask; param2=30 votes make
+    # a circle. The outline check below then decides whether it really is a ball.
     blurred = cv2.GaussianBlur(part, (9, 9), 2)
     circles = cv2.HoughCircles(
         blurred, cv2.HOUGH_GRADIENT, dp=2, minDist=120, param1=100, param2=30,
-        minRadius=BALL_RADIUS_MIN_PX, maxRadius=BALL_RADIUS_MAX_PX,
+        minRadius=round(RADIUS_MIN_SHARE * sphere_radius_px), maxRadius=round(RADIUS_MAX_SHARE * sphere_radius_px),
     )
     if circles is None:
         return None, part

@@ -2,6 +2,7 @@
 
 import numpy as np
 
+from objekterkennung.capture.board import unit_to_pixel
 from objekterkennung.config import load_settings
 from objekterkennung.output.display import (
     DOT_COLOR,
@@ -17,7 +18,6 @@ from objekterkennung.output.display import (
     draw_notice,
     draw_objects,
 )
-from objekterkennung.capture.board import unit_to_pixel
 from objekterkennung.output.models import DetectedObject
 
 GREEN = (0, 255, 0)

@@ -21,12 +21,14 @@ sys.path.insert(0, str(PROJECT_FOLDER))
 import cv2  # noqa: E402
 
 from objekterkennung.capture.setup_check import check_light  # noqa: E402
+from objekterkennung.config import load_settings  # noqa: E402
 
 # The 12 blocks that lie in the field in every test layout.
 EXPECTED = Counter({
     ("red", "cube"): 2, ("blue", "cube"): 2, ("yellow", "cuboid"): 2, ("green", "cuboid"): 1,
     ("blue", "prism"): 2, ("red", "prism"): 1, ("red", "sphere"): 1, ("green", "sphere"): 1,
 })
+LIGHT = load_settings().light
 # A pause of the program shows up as a jump of more than this many seconds.
 PAUSE_GAP_S = 2.0
 # The first part of every layout is left out, because the smoothing still settles there.
@@ -97,7 +99,7 @@ def evaluate(number, part, protocol, output):
             if image.exists():
                 shutil.copy(image, folder / image.name)
                 if suffix == "_field.png":
-                    brightness.append(check_light(cv2.imread(str(image))).text.split(",")[0])
+                    brightness.append(check_light(cv2.imread(str(image)), LIGHT).text.split(",")[0])
     return {
         "layout": f"L{number}",
         "seconds": round(part[-1][1] - part[0][1], 1),

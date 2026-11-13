@@ -5,7 +5,13 @@ from dataclasses import dataclass
 import cv2
 import numpy as np
 
-from objekterkennung.capture.board import MARKER_IDS, find_homography, find_markers, margin_px, straighten_field
+from objekterkennung.capture.board import (
+    MARKER_IDS,
+    find_homography,
+    find_markers,
+    margin_px,
+    straighten_field,
+)
 from objekterkennung.capture.camera import read_frame
 from objekterkennung.output.display import draw_markers
 
@@ -13,14 +19,17 @@ OK = "ok"
 WARN = "warn"
 BAD = "bad"
 LEVEL_COLORS = {OK: (0, 200, 0), WARN: (0, 200, 255), BAD: (70, 70, 255)}
-# Size: the field should fill this share of the image height. With the markers above and
-# below it, the field can fill at most about 75 % before a marker leaves the image.
+# Size: the field should fill this share of the image height. If the markers lie above and
+# below the field in the image, it can fill at most 70 % (180 of 256 mm) before a marker
+# leaves the image; with the paper turned by 90 degrees they lie left and right, and the
+# field can fill more. Above SIZE_MAX a block at the edge of the field leaves the image.
 SIZE_GOOD = 0.5
 SIZE_MIN = 0.35
 SIZE_MAX = 0.78
 # Straight: opposite field edges may differ by this share in length, the field may be turned this much.
-# 5 % is a lean of about 2-3 degrees: the tops of the blocks shift by less than 2 mm, and the
-# webcam lens alone bends the field edges by 1-2 %, so a stricter limit could not be reached.
+# With the camera about 47 cm above the field, 5 % is a lean of about 7 degrees: the tops of
+# the 32 mm blocks then shift by about 4 mm. The webcam lens alone bends the field edges by
+# 1-2 %, and the best real setup reached 2.5-3 %, so a stricter limit could not be reached.
 TILT_GOOD = 0.05
 TILT_MAX = 0.1
 TURN_GOOD_DEG = 2
@@ -29,14 +38,12 @@ TURN_MAX_DEG = 6
 # Strict, because a camera beside the middle shifts the tops of high blocks outwards.
 OFFSET_GOOD = 0.05
 OFFSET_MAX = 0.15
-# Light, measured on the white paper (low saturation) in the straight field.
+# Light, measured on the white paper (low saturation) in the straight field. The target band
+# for a green light comes from config.json (section "light"): in the light-level test (13.11.)
+# the paper went from 173 at the strongest to 145 at the weakest lamp level, about 3 grey levels
+# per step, and the colour ranges were set at 160-165. A single level cannot be told apart,
+# because the camera adjusts its exposure. Below BRIGHTNESS_MIN the light is clearly too weak.
 PAPER_SATURATION_MAX = 40
-# Target band for the paper: in the light-level test (13.11.) the paper went from 173 at the
-# strongest to 145 at the weakest lamp level, about 3 grey levels per step. The chosen level 4
-# gave 160-165, and the colour limits in config.json were tuned in this light. 155-170 is about
-# level 2 to 6; a single level cannot be told apart, because the camera adjusts its exposure.
-BRIGHTNESS_GOOD = 155
-BRIGHTNESS_GOOD_MAX = 170
 BRIGHTNESS_MIN = 90
 BRIGHTNESS_TOO_HIGH = 235
 # The darkest of 3 x 3 field parts compared with the brightest one.
@@ -75,7 +82,7 @@ class Check:
     text: str
 
 
-def check_setup(frame, board):
+def check_setup(frame, settings):
     """Runs all six checks on one camera image; returns the checks and the field corners in the image (or None)."""
     markers = find_markers(frame)
     found = [marker_id for marker_id in MARKER_IDS if marker_id in markers]
@@ -84,6 +91,7 @@ def check_setup(frame, board):
         checks = [Check("Markers", BAD, f"{len(found)} of 4 found - missing: {missing}")]
         checks += [Check(name, BAD, "needs all 4 markers") for name in ("Size", "Straight", "Centre", "Light", "Glare")]
         return checks, None
+    board = settings.board
     homography = find_homography(frame, board)
     corners = field_corners(homography, board)
     checks = [
@@ -93,7 +101,7 @@ def check_setup(frame, board):
         check_centre(corners, frame.shape),
     ]
     field_image = straighten_field(frame, homography, board)
-    checks += [check_light(field_image), check_piece_glare(field_image)]
+    checks += [check_light(field_image, settings.light), check_piece_glare(field_image)]
     return checks, corners
 
 
@@ -103,7 +111,7 @@ def field_corners(homography, board):
     The homography maps the camera image to the straight field, so its inverse maps back.
     """
     margin = margin_px(board)
-    far = margin + board.warp_px
+    far = margin + board.field_size_in_image_px
     field = np.float32([[margin, margin], [far, margin], [far, far], [margin, far]]).reshape(-1, 1, 2)
     return cv2.perspectiveTransform(field, np.linalg.inv(homography)).reshape(4, 2)
 
@@ -175,7 +183,7 @@ def check_centre(corners, shape):
     return Check("Centre", level, f"field is too far {direction} - move camera {direction}")
 
 
-def check_light(field_image):
+def check_light(field_image, light):
     """Brightness of the paper, how even it is over the field and how much is overexposed."""
     hsv = cv2.cvtColor(field_image, cv2.COLOR_BGR2HSV)
     value = hsv[:, :, 2]
@@ -195,18 +203,18 @@ def check_light(field_image):
     text = f"paper {brightness:.0f}, even {evenness:.0%}, glare {glare:.0%}"
     if brightness < BRIGHTNESS_MIN or evenness < EVENNESS_MIN or glare > GLARE_MAX:
         level = BAD
-    elif brightness < BRIGHTNESS_GOOD or brightness > BRIGHTNESS_GOOD_MAX or evenness < EVENNESS_GOOD or glare > GLARE_GOOD:
+    elif brightness < light.paper_brightness_min or brightness > light.paper_brightness_max or evenness < EVENNESS_GOOD or glare > GLARE_GOOD:
         level = WARN
     else:
         return Check("Light", OK, text)
-    if brightness < BRIGHTNESS_GOOD:
-        hint = f"too dark: lamp brighter (target {BRIGHTNESS_GOOD}-{BRIGHTNESS_GOOD_MAX})"
+    if brightness < light.paper_brightness_min:
+        hint = f"too dark: lamp brighter (target {light.paper_brightness_min}-{light.paper_brightness_max})"
     elif glare > GLARE_GOOD or brightness > BRIGHTNESS_TOO_HIGH:
         hint = "lamp darker or higher (glare)"
     elif evenness < EVENNESS_GOOD:
         hint = "lamp more to the middle (uneven)"
     else:
-        hint = f"lamp one step darker (target {BRIGHTNESS_GOOD}-{BRIGHTNESS_GOOD_MAX})"
+        hint = f"lamp one step darker (target {light.paper_brightness_min}-{light.paper_brightness_max})"
     return Check("Light", level, f"{text} - {hint}")
 
 
@@ -230,7 +238,7 @@ def check_piece_glare(field_image):
 
 
 def draw_setup(frame, checks, corners):
-    """A panel with the five traffic lights on the left, the camera image with guide lines on the right.
+    """A panel with the six traffic lights on the left, the camera image with guide lines on the right.
 
     The panel is placed next to the image (np.hstack), so it never hides the field.
     """
@@ -297,14 +305,14 @@ def is_start_click(x, y):
     return left <= x < right and top <= y < bottom
 
 
-def run_setup(capture, board, window_name):
+def run_setup(capture, settings, window_name):
     """Shows the setup mode until Enter or START is pressed (returns True) or q (returns False)."""
     clicks = []
     cv2.namedWindow(window_name)
     cv2.setMouseCallback(window_name, lambda event, x, y, flags, param: _remember_start(event, x, y, clicks))
     while True:
         frame = read_frame(capture)
-        checks, corners = check_setup(frame, board)
+        checks, corners = check_setup(frame, settings)
         cv2.imshow(window_name, draw_setup(frame, checks, corners))
         key = cv2.waitKey(1) & 0xFF
         if key in START_KEYS or clicks:

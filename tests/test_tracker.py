@@ -1,7 +1,13 @@
 """Tests for reporting changes: new, removed and moved objects."""
 
 from objekterkennung.output.models import DetectedObject
-from objekterkennung.output.tracker import MOVED, NEW, REMOVED, ChangeTracker, compare_scenes
+from objekterkennung.output.tracker import (
+    MOVED,
+    NEW,
+    REMOVED,
+    ChangeTracker,
+    compare_scenes,
+)
 
 STABLE_FRAMES = 3
 MOVE_THRESHOLD = 0.02

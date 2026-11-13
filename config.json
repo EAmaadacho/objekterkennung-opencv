@@ -1,26 +1,49 @@
 {
-  "camera_index": 1,
+  "camera": {
+    "number": 1,
+    "width_px": 1920,
+    "height_px": 1080
+  },
   "board": {
-    "field_mm": 180,
-    "margin_mm": 15,
-    "marker_mm": 30,
-    "marker_gap_mm": 8,
-    "warp_px": 600
+    "field_size_mm": 180,
+    "margin_around_field_mm": 15,
+    "marker_size_mm": 30,
+    "marker_distance_to_field_mm": 8,
+    "field_size_in_image_px": 600
   },
-  "saturation_min": {
-    "red": 100,
-    "yellow": 80,
-    "green": 60,
-    "blue": 60
+  "colors": {
+    "hue_ranges": {
+      "red": [[0, 3], [160, 180]],
+      "yellow": [[5, 40]],
+      "green": [[40, 97]],
+      "blue": [[100, 130]]
+    },
+    "min_saturation": {
+      "red": 100,
+      "yellow": 80,
+      "green": 60,
+      "blue": 60
+    },
+    "min_brightness": {
+      "red": 60,
+      "yellow": 60,
+      "green": 45,
+      "blue": 60
+    }
   },
-  "value_min": 60,
-  "hue_ranges": {
-    "red": [[0, 3], [160, 180]],
-    "yellow": [[5, 40]],
-    "green": [[40, 97]],
-    "blue": [[100, 130]]
+  "objects": {
+    "sphere_diameter_mm": 46,
+    "prism_pair_colors": ["blue"]
   },
-  "min_area_px": 3000,
-  "stable_frames": 10,
-  "move_threshold": 0.02
+  "light": {
+    "paper_brightness_min": 155,
+    "paper_brightness_max": 170
+  },
+  "detection": {
+    "min_object_area_px": 3000
+  },
+  "changes": {
+    "frames_until_reported": 10,
+    "min_move_share_of_field": 0.02
+  }
 }

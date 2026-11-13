@@ -16,8 +16,11 @@ SEED_RATIO = 0.8
 EDGE_LOW = 30
 EDGE_HIGH = 90
 # Two blocks of the same colour lying flush often show only a faint seam that these
-# thresholds miss. A second, finer edge search finds it. It is only used for large areas
-# (at least two blocks big), because inside a single cuboid it finds wood grain as well.
+# thresholds miss. A second, finer edge search finds it. It is only used for large areas,
+# because inside a small block it finds wood grain as well: 16000 px lie above a cube top
+# (32 x 32 mm = 11 400 px) and just above a cuboid top (58 x 24 mm = 15 500 px). A cuboid
+# with a visible side face can be larger; its result is used only if the finer search finds
+# more wide, bright top faces than the normal one, which wood grain did not do in the recordings.
 FINE_EDGE_LOW = 10
 FINE_EDGE_HIGH = 30
 FINE_EDGE_AREA_MIN_PX = 16000
@@ -35,16 +38,18 @@ def color_mask(field_image, color, settings):
 
     The image is converted to HSV first, because there the colour (hue) is one
     number, e.g. about 120 for blue, no matter how bright the light is. White
-    paper and grey shadows have almost no saturation, so saturation_min removes them.
+    paper and grey shadows have almost no saturation, so min_saturation removes them.
     It is set per colour in config.json, because it depends on the light: strong light
     makes the tops of the blocks paler, and skin is close to red, so red needs a higher
-    limit than the other colours.
+    limit than the other colours. min_brightness is set per colour as well: the dark
+    green blocks reach only 27-54 in their shadowed parts, the other colours stay above 60.
+    All three values come from config.json (section "colors").
     """
     hsv = cv2.cvtColor(field_image, cv2.COLOR_BGR2HSV)
     mask = np.zeros(hsv.shape[:2], dtype=np.uint8)
     # Red needs two ranges, because its hue lies at both ends of the scale (0-10 and 170-180).
-    for hue_low, hue_high in settings.hue_ranges[color]:
-        lower = (hue_low, settings.saturation_min[color], settings.value_min)
+    for hue_low, hue_high in settings.colors.hue_ranges[color]:
+        lower = (hue_low, settings.colors.min_saturation[color], settings.colors.min_brightness[color])
         upper = (min(hue_high, HUE_MAX), 255, 255)
         # An image is a numpy array, so | joins two masks pixel by pixel (white where either is white).
         mask = mask | cv2.inRange(hsv, lower, upper)
@@ -62,18 +67,20 @@ def clean_mask(mask):
     return cv2.morphologyEx(opened, cv2.MORPH_CLOSE, kernel)
 
 
-def split_touching(mask, min_area_px, field_image=None):
+def split_touching(mask, settings, field_image=None):
     """Splits a colour mask into one mask per object, also when objects touch.
 
     A ball is cut out first, because it can melt together with a block of the
-    same colour (e.g. the yellow ball and a yellow cuboid). Then the visible
+    same colour (e.g. the green sphere and the green cuboid). Then the visible
     edges of the field image cut the area into pieces: two
     cubes lying flush show a dark line between them. If that gives fewer than
     two seeds, the distance transform finds the centre of every object as a
     "hill" instead. Large areas are also searched with finer edges, because the seam
     between two flush blocks of the same colour can be very faint. In both cases watershed draws the final border.
-    Areas smaller than min_area_px are dropped as noise.
+    Areas smaller than min_object_area_px (config.json, "detection") are dropped as noise.
     """
+    min_area_px = settings.detection.min_object_area_px
+    sphere_radius_px = settings.objects.sphere_diameter_mm / 2 * settings.board.px_per_mm()
     edges = None if field_image is None else _edges(field_image, EDGE_LOW, EDGE_HIGH)
     fine_edges = None if field_image is None else _edges(field_image, FINE_EDGE_LOW, FINE_EDGE_HIGH)
     objects = []
@@ -81,11 +88,11 @@ def split_touching(mask, min_area_px, field_image=None):
         if np.count_nonzero(part) < min_area_px:
             continue
         part = fill_holes(part)
-        ball, rest = cut_ball(part)
+        ball, rest = cut_ball(part, sphere_radius_px)
         if ball is not None:
             objects.append(ball)
             # The rest may still hold several blocks, so it goes through the same steps.
-            objects.extend(split_touching(clean_mask(rest), min_area_px, field_image))
+            objects.extend(split_touching(clean_mask(rest), settings, field_image))
             continue
         seeds = None if edges is None else _edge_seeds(part, edges, field_image)
         count = 0 if seeds is None else len(areas(seeds))
@@ -105,8 +112,8 @@ def split_touching(mask, min_area_px, field_image=None):
 def _edges(field_image, low, high):
     """Canny edges of the field with the thresholds low and high, made 3 px wide so that a thin border line closes.
 
-    Every colour channel is searched on its own, because the orange ball and a
-    yellow cuboid are almost equally bright and differ only in the green channel.
+    Every colour channel is searched on its own, because two neighbouring areas can be
+    equally bright in the grey image and differ only in one channel (script ch. 4.1, 4.2).
     """
     blurred = cv2.GaussianBlur(field_image, (5, 5), 0)
     edges = np.zeros(field_image.shape[:2], dtype=np.uint8)

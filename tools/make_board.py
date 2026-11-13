@@ -26,8 +26,8 @@ ARUCO_DICTIONARY = cv2.aruco.DICT_4X4_50
 
 def main():
     board = load_settings().board
-    field_left = (PAGE_WIDTH_MM - board.field_mm) / 2
-    field_top = (PAGE_HEIGHT_MM - board.field_mm) / 2
+    field_left = (PAGE_WIDTH_MM - board.field_size_mm) / 2
+    field_top = (PAGE_HEIGHT_MM - board.field_size_mm) / 2
     pdf = canvas.Canvas(str(OUTPUT_PATH), pagesize=A4)
 
     _draw_markers(pdf, board, field_left, field_top)
@@ -47,18 +47,18 @@ def _y(top_mm):
 def _draw_markers(pdf, board, field_left, field_top):
     """Draws marker 0 top-left, 1 top-right, 2 bottom-right and 3 bottom-left of the field."""
     dictionary = cv2.aruco.getPredefinedDictionary(ARUCO_DICTIONARY)
-    half = board.marker_mm / 2
+    half = board.marker_size_mm / 2
     for marker_id, (center_x, center_y) in board.marker_centers_mm().items():
         marker = cv2.aruco.generateImageMarker(dictionary, marker_id, 600)
         left = field_left + center_x - half
         top = field_top + center_y - half
         image = ImageReader(Image.fromarray(marker))
-        pdf.drawImage(image, left * mm, _y(top + board.marker_mm), board.marker_mm * mm, board.marker_mm * mm)
+        pdf.drawImage(image, left * mm, _y(top + board.marker_size_mm), board.marker_size_mm * mm, board.marker_size_mm * mm)
 
 
 def _draw_grid(pdf, board, field_left, field_top):
     """Light grey lines every 0.1; low saturation, so the detection ignores them."""
-    size = board.field_mm
+    size = board.field_size_mm
     pdf.setStrokeGray(0.75)
     pdf.setLineWidth(0.4)
     for i in range(1, 10):
@@ -72,7 +72,7 @@ def _draw_grid(pdf, board, field_left, field_top):
 
 def _draw_axis_labels(pdf, board, field_left, field_top):
     """Origin (0,0) bottom-left, x to the right, y upwards, (1,1) top-right."""
-    size = board.field_mm
+    size = board.field_size_mm
     bottom = field_top + size
     pdf.setFont("Helvetica", 6)
     pdf.setFillGray(0.45)

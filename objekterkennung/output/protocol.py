@@ -9,7 +9,7 @@ from pathlib import Path
 import cv2
 
 PROTOCOL_FOLDER = Path("recordings")
-# Every 30th frame (about every 1-2 seconds) the images are saved as well.
+# Every 30th frame (about every 3-4 seconds at 7-10 frames per second) the images are saved as well.
 IMAGE_EVERY_FRAMES = 30
 RAW = "raw"
 SHOWN = "shown"

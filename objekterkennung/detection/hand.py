@@ -11,11 +11,17 @@ WARM_HUE_MIN = 165
 SKIN_SATURATION_MIN = 25
 SKIN_VALUE_MIN = 50
 DARK_VALUE_MAX = 60
-# Around every block 7 px on each side are counted as the block too, because its border is often blurred.
+# Around every block 7 px on each side (a 15 px kernel) are counted as the block too,
+# because its border is often blurred.
 KNOWN_MARGIN_PX = 15
-# A hand always reaches in from the edge of the field and covers more than a cube top (about 6500 px).
+# Small dark or warm specks are removed before the areas are measured (opening, script ch. 5).
+OPENING_PX = 7
+# A hand always reaches in from the edge of the image. 8000 px are about 27 x 27 mm.
 HAND_AREA_MIN_PX = 8000
 BORDER_PX = 3
+# A strip of table or cardboard can show along the edge of the image if the paper ends there.
+# It is long but thin; a hand or arm is at least this wide (30 px are 9 mm).
+STRIP_WIDTH_MAX_PX = 30
 
 
 def hand_in_field(field_image, settings):
@@ -29,11 +35,12 @@ def hand_in_field(field_image, settings):
     warm = (hue <= WARM_HUE_MAX) | (hue >= WARM_HUE_MIN)
     skin_or_dark = (warm & (saturation >= SKIN_SATURATION_MIN) & (value >= SKIN_VALUE_MIN)) | (value < DARK_VALUE_MAX)
     known = np.zeros(hue.shape, dtype=np.uint8)
-    for color in settings.hue_ranges:
+    for color in settings.colors.hue_ranges:
         known = known | color_mask(field_image, color, settings)
     known = cv2.dilate(known, np.ones((KNOWN_MARGIN_PX, KNOWN_MARGIN_PX), np.uint8))
     rest = np.where(skin_or_dark & (known == 0), 255, 0).astype(np.uint8)
-    rest = cv2.morphologyEx(rest, cv2.MORPH_OPEN, np.ones((7, 7), np.uint8))
+    rest = cv2.morphologyEx(rest, cv2.MORPH_OPEN, np.ones((OPENING_PX, OPENING_PX), np.uint8))
+
     contours, _ = cv2.findContours(rest, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     height, width = rest.shape
     for contour in contours:
@@ -45,6 +52,7 @@ def hand_in_field(field_image, settings):
             or left + box_width >= width - BORDER_PX
             or top + box_height >= height - BORDER_PX
         )
-        if touches_border and area >= HAND_AREA_MIN_PX:
+        (_, _), (side_a, side_b), _ = cv2.minAreaRect(contour)
+        if touches_border and area >= HAND_AREA_MIN_PX and min(side_a, side_b) > STRIP_WIDTH_MAX_PX:
             return True
     return False

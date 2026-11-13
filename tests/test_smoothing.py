@@ -39,10 +39,21 @@ def test_A4_removed_object_disappears_after_half_the_frames():
     assert result == [RED_PRISM]
 
 
-def test_A4_moved_object_has_the_newest_position():
+def test_A4_single_jittering_frame_does_not_move_the_position():
     smoother = FrameSmoother(FRAMES)
-    moved = DetectedObject("prism", "red", 0.52, 0.51)
-    frames = [[RED_PRISM]] * 5 + [[moved]]
+    jitter = DetectedObject("prism", "red", 0.52, 0.51)
+    frames = [[RED_PRISM]] * 9 + [[jitter]]
+
+    for objects in frames:
+        result = smoother.update(objects)
+
+    assert result == [RED_PRISM]
+
+
+def test_A4_moved_object_shows_its_new_place_after_half_the_frames():
+    smoother = FrameSmoother(FRAMES)
+    moved = DetectedObject("prism", "red", 0.80, 0.20)
+    frames = [[RED_PRISM]] * FRAMES + [[moved]] * 6
 
     for objects in frames:
         result = smoother.update(objects)

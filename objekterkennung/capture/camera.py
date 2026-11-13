@@ -4,10 +4,6 @@ import sys
 
 import cv2
 
-# Without this request many webcams send 640 x 480, which is a cut-out from the
-# middle of the sensor: the picture looks zoomed in and the board does not fit.
-FRAME_WIDTH = 1920
-FRAME_HEIGHT = 1080
 # A single failed read can happen, e.g. when Windows briefly hands the camera to
 # another app. Only several failures in a row mean the camera is really gone.
 READ_ATTEMPTS = 5
@@ -17,12 +13,12 @@ class CameraError(RuntimeError):
     """Raised when the webcam cannot be opened or stops delivering frames."""
 
 
-def open_camera(index):
-    """Opens the webcam with the given index, e.g. 0 for the first camera.
+def open_camera(camera):
+    """Opens the webcam described in config.json (section "camera"), e.g. number 0 for the first camera.
 
-    Index 0 is usually the built-in laptop camera, so the USB webcam is often
-    index 1. The index is set in config.json ("camera_index").
+    Number 0 is usually the built-in laptop camera, so the USB webcam is often number 1.
     """
+    index = camera.number
     # On Windows DirectShow handles the Full HD request more reliably and can show the
     # driver settings. Not every OpenCV build supports it, so the default driver is the fallback.
     capture = None
@@ -37,13 +33,15 @@ def open_camera(index):
         capture.release()
         raise CameraError(
             f"No camera found with index {index}. "
-            'Check the USB cable or change "camera_index" in config.json.'
+            'Check the USB cable or change "camera": "number" in config.json.'
         )
     # MJPG is the compressed format in which USB webcams deliver Full HD fast enough.
     capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+    # Without this request many webcams send 640 x 480, which is a cut-out from the middle
+    # of the sensor: the picture looks zoomed in and the board does not fit.
     # The camera picks the nearest size it supports, e.g. 1280 x 720.
-    capture.set(cv2.CAP_PROP_FRAME_WIDTH, FRAME_WIDTH)
-    capture.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT)
+    capture.set(cv2.CAP_PROP_FRAME_WIDTH, camera.width_px)
+    capture.set(cv2.CAP_PROP_FRAME_HEIGHT, camera.height_px)
     return capture
 
 

@@ -4,7 +4,11 @@ import cv2
 import numpy as np
 
 from objekterkennung.config import load_settings
-from objekterkennung.detection.segmentation import clean_mask, color_mask, split_touching
+from objekterkennung.detection.segmentation import (
+    clean_mask,
+    color_mask,
+    split_touching,
+)
 
 FIELD_PX = 600
 WHITE = (255, 255, 255)
@@ -18,9 +22,10 @@ SHADOW_GREY = (150, 150, 150)
 # Measured with the ring light above the field: paper and shadows have hue 100-130 and
 # a saturation of at most about 30; this test shadow has hue 107, saturation 44.
 SHADOW_BLUISH = (150, 135, 124)
-# Measured on the real objects: the ball has hue 16 (orange-yellow), the red blocks hue 0.
-YELLOW_BALL = (38, 149, 245)
-MIN_AREA_PX = 400
+# Measured on the real objects (13.11.): the red sphere and red blocks have hue 170-178,
+# the yellow cuboids hue 23-27.
+RED_SPHERE = (75, 43, 200)  # HSV (174, 200, 200)
+YELLOW_CUBOID = (50, 200, 230)  # HSV (25, 200, 230)
 
 
 def test_A2_red_block_is_found_in_red_mask():
@@ -49,7 +54,7 @@ def test_A2_grey_shadow_is_ignored():
     field = _empty_field()
     cv2.rectangle(field, (200, 200), (400, 400), SHADOW_GREY, -1)
 
-    masks = [color_mask(field, color, settings) for color in settings.hue_ranges]
+    masks = [color_mask(field, color, settings) for color in settings.colors.hue_ranges]
 
     assert not any(mask.any() for mask in masks)
 
@@ -81,7 +86,7 @@ def test_A5_two_touching_cubes_are_split():
     cv2.rectangle(mask, (100, 100), (180, 180), 255, -1)
     cv2.rectangle(mask, (181, 130), (261, 210), 255, -1)
 
-    objects = split_touching(mask, MIN_AREA_PX)
+    objects = split_touching(mask, load_settings())
 
     assert len(objects) == 2
 
@@ -90,7 +95,7 @@ def test_A5_cuboid_stays_one_object():
     mask = np.zeros((FIELD_PX, FIELD_PX), dtype=np.uint8)
     cv2.rectangle(mask, (100, 100), (266, 183), 255, -1)
 
-    objects = split_touching(mask, MIN_AREA_PX)
+    objects = split_touching(mask, load_settings())
 
     assert len(objects) == 1
 
@@ -100,7 +105,7 @@ def test_A5_two_touching_spheres_are_split():
     cv2.circle(mask, (200, 300), 75, 255, -1)
     cv2.circle(mask, (348, 300), 75, 255, -1)
 
-    objects = split_touching(mask, MIN_AREA_PX)
+    objects = split_touching(mask, load_settings())
 
     assert len(objects) == 2
 
@@ -113,7 +118,7 @@ def test_A5_two_flush_cubes_are_split_at_the_visible_seam():
     cv2.rectangle(field, (182, 100), (262, 180), RED, -1)
     cv2.line(field, (181, 100), (181, 180), SEAM, 2)
 
-    objects = split_touching(color_mask(field, "red", settings), MIN_AREA_PX, field)
+    objects = split_touching(color_mask(field, "red", settings), settings, field)
 
     assert len(objects) == 2
 
@@ -126,7 +131,7 @@ def test_A5_two_flush_cubes_with_faint_seam_are_split():
     cv2.rectangle(field, (212, 100), (322, 210), RED, -1)
     cv2.line(field, (211, 100), (211, 210), FAINT_SEAM, 2)
 
-    objects = split_touching(color_mask(field, "red", settings), MIN_AREA_PX, field)
+    objects = split_touching(color_mask(field, "red", settings), settings, field)
 
     assert len(objects) == 2
 
@@ -136,7 +141,7 @@ def test_A5_large_cuboid_without_seam_stays_one_object():
     field = _empty_field()
     cv2.rectangle(field, (100, 100), (322, 210), RED, -1)
 
-    objects = split_touching(color_mask(field, "red", settings), MIN_AREA_PX, field)
+    objects = split_touching(color_mask(field, "red", settings), settings, field)
 
     assert len(objects) == 1
 
@@ -149,7 +154,7 @@ def test_A5_darker_side_face_stays_with_its_cube():
     cv2.rectangle(field, (100, 183), (180, 240), DARK_RED, -1)
     cv2.line(field, (100, 181), (180, 181), SEAM, 2)
 
-    objects = split_touching(color_mask(field, "red", settings), MIN_AREA_PX, field)
+    objects = split_touching(color_mask(field, "red", settings), settings, field)
 
     assert len(objects) == 1
 
@@ -160,7 +165,7 @@ def test_A5_ball_with_reflection_stays_one_object():
     cv2.circle(mask, (300, 300), 75, 255, -1)
     cv2.circle(mask, (292, 300), 10, 0, -1)
 
-    objects = split_touching(mask, MIN_AREA_PX)
+    objects = split_touching(mask, load_settings())
 
     assert len(objects) == 1
 
@@ -169,21 +174,22 @@ def test_A5_tiny_specks_are_dropped():
     mask = np.zeros((FIELD_PX, FIELD_PX), dtype=np.uint8)
     cv2.rectangle(mask, (10, 10), (15, 15), 255, -1)
 
-    objects = split_touching(mask, MIN_AREA_PX)
+    objects = split_touching(mask, load_settings())
 
     assert objects == []
 
 
-def test_A2_orange_tinted_ball_counts_as_yellow_not_red():
+def test_A2_red_sphere_counts_as_red_and_yellow_cuboid_as_yellow():
     settings = load_settings()
     field = _empty_field()
-    cv2.circle(field, (300, 300), 70, YELLOW_BALL, -1)
+    cv2.circle(field, (200, 300), 70, RED_SPHERE, -1)
+    cv2.rectangle(field, (350, 260), (540, 340), YELLOW_CUBOID, -1)
 
-    yellow = color_mask(field, "yellow", settings)
     red = color_mask(field, "red", settings)
+    yellow = color_mask(field, "yellow", settings)
 
-    assert yellow[300, 300] == 255
-    assert not red.any()
+    assert red[300, 200] == 255 and red[300, 450] == 0
+    assert yellow[300, 450] == 255 and yellow[300, 200] == 0
 
 
 def _empty_field():

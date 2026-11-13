@@ -24,35 +24,35 @@ class Change:
 
 
 class ChangeTracker:
-    """Reports a change only when the new scene has stayed the same for stable_frames images.
+    """Reports a change only when the new scene has stayed the same for frames_until_reported images.
 
     This waits until a hand has left the field: while the lecturer places a
     block, the scene changes in every frame, so nothing is reported yet.
     """
 
-    def __init__(self, stable_frames, move_threshold):
-        self._stable_frames = stable_frames
-        self._move_threshold = move_threshold
+    def __init__(self, frames_until_reported, min_move_share_of_field):
+        self._frames_until_reported = frames_until_reported
+        self._min_move_share_of_field = min_move_share_of_field
         self._reported = []
         self._candidate = []
         self._candidate_frames = 0
 
     def update(self, objects):
         """Takes the objects of one frame and returns the changes, usually an empty list."""
-        if _same_scene(objects, self._candidate, self._move_threshold):
+        if _same_scene(objects, self._candidate, self._min_move_share_of_field):
             self._candidate_frames += 1
         else:
             self._candidate = objects
             self._candidate_frames = 1
-        if self._candidate_frames != self._stable_frames:
+        if self._candidate_frames != self._frames_until_reported:
             return []
-        changes = compare_scenes(self._reported, objects, self._move_threshold)
+        changes = compare_scenes(self._reported, objects, self._min_move_share_of_field)
         if changes:
             self._reported = objects
         return changes
 
 
-def compare_scenes(old_objects, new_objects, move_threshold):
+def compare_scenes(old_objects, new_objects, min_move_share_of_field):
     """Lists what changed from the old to the new scene: NEW, REMOVED or MOVED.
 
     An object only matches an object of the same shape and colour. The two
@@ -62,15 +62,15 @@ def compare_scenes(old_objects, new_objects, move_threshold):
     changes = [Change(REMOVED, item) for item in removed]
     changes += [Change(NEW, item) for item in added]
     for old, new in pairs:
-        if _distance(old, new) > move_threshold:
+        if _distance(old, new) > min_move_share_of_field:
             changes.append(Change(MOVED, new, old))
     return changes
 
 
-def _same_scene(first, second, move_threshold):
-    """True if both lists hold the same objects, each one moved less than move_threshold."""
+def _same_scene(first, second, min_move_share_of_field):
+    """True if both lists hold the same objects, each one moved less than min_move_share_of_field."""
     pairs, removed, added = _match(first, second)
-    return not removed and not added and all(_distance(a, b) <= move_threshold for a, b in pairs)
+    return not removed and not added and all(_distance(a, b) <= min_move_share_of_field for a, b in pairs)
 
 
 def _match(old_objects, new_objects):

@@ -3,13 +3,21 @@
 import cv2
 import numpy as np
 
-from objekterkennung.detection.ball import OUTLINE_MATCH_MIN, OUTLINE_TOLERANCE_PX, cut_ball, outline_match, refine_circle
+from objekterkennung.config import load_settings
+from objekterkennung.detection.ball import (
+    OUTLINE_MATCH_MIN,
+    OUTLINE_TOLERANCE_PX,
+    cut_ball,
+    outline_match,
+    refine_circle,
+)
 from objekterkennung.detection.segmentation import split_touching
 from objekterkennung.detection.shapes import classify_shape
 
 FIELD_PX = 600
 BALL_RADIUS_PX = 75
-MIN_AREA_PX = 3000
+# 46 mm / 2 x 600 px / 180 mm, as derived from config.json.
+SPHERE_RADIUS_PX = 77
 
 
 def test_A5_ball_touching_a_cuboid_is_cut_out():
@@ -17,7 +25,7 @@ def test_A5_ball_touching_a_cuboid_is_cut_out():
     cv2.rectangle(mask, (100, 150), (183, 316), 255, -1)
     cv2.circle(mask, (183 + BALL_RADIUS_PX - 10, 300), BALL_RADIUS_PX, 255, -1)
 
-    pieces = split_touching(mask, MIN_AREA_PX)
+    pieces = split_touching(mask, load_settings())
 
     assert sorted(classify_shape(piece) for piece in pieces) == ["cuboid", "sphere"]
 
@@ -26,7 +34,7 @@ def test_A1_cube_alone_has_no_ball():
     mask = np.zeros((FIELD_PX, FIELD_PX), dtype=np.uint8)
     cv2.rectangle(mask, (200, 200), (333, 333), 255, -1)
 
-    ball, rest = cut_ball(mask)
+    ball, rest = cut_ball(mask, SPHERE_RADIUS_PX)
 
     assert ball is None
     assert (rest == mask).all()

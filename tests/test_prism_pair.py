@@ -47,3 +47,14 @@ def test_A1_line_across_the_middle_is_not_a_joint():
     pieces = split_prism_pair(mask, image)
 
     assert len(pieces) == 1
+
+
+def test_A1_dark_spot_on_half_the_diagonal_is_not_a_joint():
+    image, mask = _square(20)
+    corners = cv2.boxPoints(((150, 150), (120, 120), 20)).astype(np.int32)
+    middle = tuple(((corners[0] + corners[2]) // 2).tolist())
+    cv2.line(image, tuple(corners[0].tolist()), middle, DARK_BLUE, 2)
+
+    pieces = split_prism_pair(mask, image)
+
+    assert len(pieces) == 1

@@ -9,7 +9,12 @@ import numpy as np
 
 from objekterkennung.capture.board import find_homography, straighten_field
 from objekterkennung.capture.camera import read_frame
-from objekterkennung.config import COLOR_NAMES, DEFAULT_CONFIG_PATH, load_settings
+from objekterkennung.config import (
+    COLOR_NAMES,
+    DEFAULT_CONFIG_PATH,
+    Colors,
+    load_settings,
+)
 from objekterkennung.detection.segmentation import HUE_MAX, color_mask
 
 WINDOW_NAME = "Calibration"
@@ -26,20 +31,21 @@ HELP_TEXT = "w = save, q = back"
 def run_calibration(capture, path=DEFAULT_CONFIG_PATH):
     """Shows the field and the mask of one colour; the sliders change the HSV range live.
 
-    Hue and minimum saturation belong to the chosen colour, the minimum brightness to all colours.
+    Hue, minimum saturation and minimum brightness belong to the chosen colour.
 
     "Colour" selects red (0), yellow (1), green (2) or blue (3). The mask on the
     right should be white exactly where the blocks of that colour lie.
     """
     settings = load_settings(path)
-    hue_ranges = dict(settings.hue_ranges)
-    saturation_min = dict(settings.saturation_min)
+    hue_ranges = dict(settings.colors.hue_ranges)
+    min_saturation = dict(settings.colors.min_saturation)
+    min_brightness = dict(settings.colors.min_brightness)
     cv2.namedWindow(WINDOW_NAME)
     cv2.createTrackbar(COLOR_SLIDER, WINDOW_NAME, 0, len(COLOR_NAMES) - 1, _ignore)
     cv2.createTrackbar(HUE_LOW_SLIDER, WINDOW_NAME, 0, HUE_MAX, _ignore)
     cv2.createTrackbar(HUE_HIGH_SLIDER, WINDOW_NAME, 0, HUE_MAX, _ignore)
     cv2.createTrackbar(SATURATION_SLIDER, WINDOW_NAME, 0, 255, _ignore)
-    cv2.createTrackbar(VALUE_SLIDER, WINDOW_NAME, settings.value_min, 255, _ignore)
+    cv2.createTrackbar(VALUE_SLIDER, WINDOW_NAME, 0, 255, _ignore)
     shown_color = None
     homography = None
     while True:
@@ -49,21 +55,23 @@ def run_calibration(capture, path=DEFAULT_CONFIG_PATH):
             low, high = bounds_from_hue_ranges(hue_ranges[color])
             cv2.setTrackbarPos(HUE_LOW_SLIDER, WINDOW_NAME, low)
             cv2.setTrackbarPos(HUE_HIGH_SLIDER, WINDOW_NAME, high)
-            cv2.setTrackbarPos(SATURATION_SLIDER, WINDOW_NAME, saturation_min[color])
+            cv2.setTrackbarPos(SATURATION_SLIDER, WINDOW_NAME, min_saturation[color])
+            cv2.setTrackbarPos(VALUE_SLIDER, WINDOW_NAME, min_brightness[color])
             shown_color = color
         low = cv2.getTrackbarPos(HUE_LOW_SLIDER, WINDOW_NAME)
         high = cv2.getTrackbarPos(HUE_HIGH_SLIDER, WINDOW_NAME)
         hue_ranges[color] = hue_ranges_from_bounds(low, high)
-        saturation_min[color] = cv2.getTrackbarPos(SATURATION_SLIDER, WINDOW_NAME)
-        value_min = cv2.getTrackbarPos(VALUE_SLIDER, WINDOW_NAME)
-        current = replace(settings, hue_ranges=hue_ranges, saturation_min=saturation_min, value_min=value_min)
+        min_saturation[color] = cv2.getTrackbarPos(SATURATION_SLIDER, WINDOW_NAME)
+        min_brightness[color] = cv2.getTrackbarPos(VALUE_SLIDER, WINDOW_NAME)
+        colors = Colors(hue_ranges=hue_ranges, min_saturation=min_saturation, min_brightness=min_brightness)
+        current = replace(settings, colors=colors)
 
         frame = read_frame(capture)
         homography = find_homography(frame, settings.board, last_homography=homography)
         if homography is None:
             # Without a field the whole camera image is shown, made smaller so both halves fit on the screen.
-            scale = settings.board.warp_px / frame.shape[0]
-            image = cv2.resize(frame, (round(frame.shape[1] * scale), settings.board.warp_px))
+            scale = settings.board.field_size_in_image_px / frame.shape[0]
+            image = cv2.resize(frame, (round(frame.shape[1] * scale), settings.board.field_size_in_image_px))
         else:
             image = straighten_field(frame, homography, settings.board)
         mask = color_mask(image, color, current)
@@ -74,7 +82,7 @@ def run_calibration(capture, path=DEFAULT_CONFIG_PATH):
 
         key = cv2.waitKey(1) & 0xFF
         if key == ord(SAVE_KEY):
-            save_colors(path, hue_ranges, saturation_min, value_min)
+            save_colors(path, colors)
             print(f"Colour ranges saved in {path}.")
         if key == ord(BACK_KEY):
             break
@@ -101,17 +109,21 @@ def bounds_from_hue_ranges(hue_ranges):
     return hue_ranges[0]
 
 
-def save_colors(path, hue_ranges, saturation_min, value_min):
-    """Writes the colour settings into config.json and keeps all other settings."""
+def save_colors(path, colors):
+    """Writes the colour settings into the section "colors" of config.json and keeps all other settings."""
     with open(path, encoding="utf-8") as file:
         raw = json.load(file)
-    raw["hue_ranges"] = {name: [list(hue_range) for hue_range in hue_ranges[name]] for name in COLOR_NAMES}
-    raw["saturation_min"] = {name: saturation_min[name] for name in COLOR_NAMES}
-    raw["value_min"] = value_min
+    raw["colors"] = {
+        "hue_ranges": {name: [list(hue_range) for hue_range in colors.hue_ranges[name]] for name in COLOR_NAMES},
+        "min_saturation": {name: colors.min_saturation[name] for name in COLOR_NAMES},
+        "min_brightness": {name: colors.min_brightness[name] for name in COLOR_NAMES},
+    }
     text = json.dumps(raw, indent=2)
     # Keeps the short form [[0, 10], [170, 180]] instead of one number per line.
     text = re.sub(r"\[\s+(\d+),\s+(\d+)\s+\]", r"[\1, \2]", text)
     text = re.sub(r"\[\s+(\[\d+, \d+\](?:,\s+\[\d+, \d+\])*)\s+\]", _one_line, text)
+    # The same for short lists of names, e.g. ["blue"].
+    text = re.sub(r'\[\s+("[^"]+"(?:,\s+"[^"]+")*)\s+\]', _one_line, text)
     with open(path, "w", encoding="utf-8") as file:
         file.write(text + "\n")
 

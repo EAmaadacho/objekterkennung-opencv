@@ -5,15 +5,26 @@ import sys
 
 import cv2
 
-from objekterkennung.capture.board import find_homography, find_markers, straighten_field
+from objekterkennung.capture.board import (
+    find_homography,
+    find_markers,
+    straighten_field,
+)
 from objekterkennung.capture.calibration import run_calibration
 from objekterkennung.capture.camera import CameraError, open_camera, read_frame
+from objekterkennung.capture.setup_check import run_setup
 from objekterkennung.config import load_settings
 from objekterkennung.detection.detector import detect_objects
-from objekterkennung.output.display import add_status_bar, button_at, compose_window, draw_markers, draw_notice, draw_objects
 from objekterkennung.detection.hand import hand_in_field
+from objekterkennung.output.display import (
+    add_status_bar,
+    button_at,
+    compose_window,
+    draw_markers,
+    draw_notice,
+    draw_objects,
+)
 from objekterkennung.output.protocol import LabelProtocol
-from objekterkennung.capture.setup_check import run_setup
 from objekterkennung.output.smoothing import FrameSmoother
 from objekterkennung.output.tracker import ChangeTracker
 
@@ -43,12 +54,12 @@ def main():
 def _run(arguments):
     """Runs the camera loop until the q key is pressed."""
     settings = load_settings()
-    capture = open_camera(settings.camera_index)
+    capture = open_camera(settings.camera)
     if arguments.calibrate:
         run_calibration(capture)
         settings = load_settings()
-    tracker = ChangeTracker(settings.stable_frames, settings.move_threshold)
-    smoother = FrameSmoother(settings.stable_frames)
+    tracker = ChangeTracker(settings.changes.frames_until_reported, settings.changes.min_move_share_of_field)
+    smoother = FrameSmoother(settings.changes.frames_until_reported)
     protocol = None
     homography = None
     objects = []
@@ -56,7 +67,7 @@ def _run(arguments):
     clicks = []
     try:
         # First the setup mode, so camera and light are checked before anything is detected.
-        if not arguments.skip_setup and not run_setup(capture, settings.board, WINDOW_NAME):
+        if not arguments.skip_setup and not run_setup(capture, settings, WINDOW_NAME):
             return
         cv2.namedWindow(WINDOW_NAME)
         # OpenCV calls this function for every mouse event in the window; a left click is kept for the loop.

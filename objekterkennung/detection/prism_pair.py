@@ -21,6 +21,11 @@ JOINT_CONTRAST_MIN = 9
 MIN_ROW_PX = 30
 # The border of the object is left out, because it is dark from the side faces.
 BORDER_PX = 11
+# The joint runs through the whole square. The line is cut into this many pieces, and each
+# piece must be at least half as dark as the whole line, so a short dark spot (a knot in the
+# wood, a shadow at one corner) is not taken for a joint.
+JOINT_PIECES = 3
+JOINT_PIECE_SHARE_MIN = 0.5
 
 
 def split_prism_pair(object_mask, field_image):
@@ -68,25 +73,34 @@ def _darkest_row(gray, inner, center, angle):
     size = (gray.shape[1], gray.shape[0])
     turned = cv2.warpAffine(gray, rotation, size)
     turned_mask = cv2.warpAffine(inner, rotation, size, flags=cv2.INTER_NEAREST)
-    middle = int(round(center[1]))
+    middle = round(center[1])
     best = (0.0, 0)
     for offset in range(-MAX_OFFSET_PX, MAX_OFFSET_PX + 1):
         rows = [middle + offset - NEIGHBOUR_PX, middle + offset, middle + offset + NEIGHBOUR_PX]
-        means = [_row_mean(turned, turned_mask, row) for row in rows]
+        means = [_row_means(turned, turned_mask, row) for row in rows]
         if None in means:
             continue
-        contrast = (means[0] + means[2]) / 2 - means[1]
+        pieces = [(above + below) / 2 - on_line for above, on_line, below in zip(*means)]
+        contrast = sum(pieces) / len(pieces)
+        # The line must be dark along its whole length, not only in one place.
+        if min(pieces) < JOINT_PIECE_SHARE_MIN * contrast:
+            continue
         if contrast > best[0]:
             best = (contrast, offset)
     return best
 
 
-def _row_mean(image, mask, row):
-    """Mean brightness of the object pixels in one row, or None if there are too few."""
+def _row_means(image, mask, row):
+    """Mean brightness of the object pixels in each of the JOINT_PIECES parts of one row.
+
+    Returns None if the row has too few object pixels.
+    """
     if not 0 <= row < image.shape[0]:
         return None
     pixels = image[row][mask[row] > 0]
-    return float(pixels.mean()) if len(pixels) >= MIN_ROW_PX else None
+    if len(pixels) < MIN_ROW_PX:
+        return None
+    return [float(piece.mean()) for piece in np.array_split(pixels, JOINT_PIECES)]
 
 
 def _cut_along(object_mask, center, angle, offset):

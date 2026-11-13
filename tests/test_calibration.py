@@ -2,8 +2,12 @@
 
 import json
 
-from objekterkennung.capture.calibration import bounds_from_hue_ranges, hue_ranges_from_bounds, save_colors
-from objekterkennung.config import DEFAULT_CONFIG_PATH, load_settings
+from objekterkennung.capture.calibration import (
+    bounds_from_hue_ranges,
+    hue_ranges_from_bounds,
+    save_colors,
+)
+from objekterkennung.config import DEFAULT_CONFIG_PATH, Colors, load_settings
 
 
 def test_A7_normal_slider_range_gives_one_hue_range():
@@ -27,16 +31,18 @@ def test_A7_red_ranges_go_back_onto_the_sliders():
 def test_A7_saved_colors_are_loaded_again(tmp_path):
     path = tmp_path / "config.json"
     path.write_text(DEFAULT_CONFIG_PATH.read_text(encoding="utf-8"), encoding="utf-8")
-    hue_ranges = dict(load_settings(path).hue_ranges)
+    colors = load_settings(path).colors
+    hue_ranges = dict(colors.hue_ranges)
     hue_ranges["blue"] = [(100, 125)]
-    saturation_min = {"red": 90, "yellow": 90, "green": 90, "blue": 150}
+    min_saturation = {"red": 90, "yellow": 90, "green": 90, "blue": 150}
+    min_brightness = {"red": 60, "yellow": 60, "green": 40, "blue": 50}
 
-    save_colors(path, hue_ranges, saturation_min, value_min=50)
+    save_colors(path, Colors(hue_ranges, min_saturation, min_brightness))
 
     settings = load_settings(path)
-    assert settings.hue_ranges["blue"] == [(100, 125)]
-    assert (settings.saturation_min["blue"], settings.value_min) == (150, 50)
-    assert settings.camera_index == json.loads(DEFAULT_CONFIG_PATH.read_text(encoding="utf-8"))["camera_index"]
+    assert settings.colors.hue_ranges["blue"] == [(100, 125)]
+    assert (settings.colors.min_saturation["blue"], settings.colors.min_brightness["green"]) == (150, 40)
+    assert settings.camera.number == json.loads(DEFAULT_CONFIG_PATH.read_text(encoding="utf-8"))["camera"]["number"]
 
 
 def test_A7_saving_unchanged_values_keeps_config_json_as_it_is(tmp_path):
@@ -45,6 +51,6 @@ def test_A7_saving_unchanged_values_keeps_config_json_as_it_is(tmp_path):
     path.write_text(original, encoding="utf-8")
     settings = load_settings(path)
 
-    save_colors(path, settings.hue_ranges, settings.saturation_min, settings.value_min)
+    save_colors(path, settings.colors)
 
     assert path.read_text(encoding="utf-8") == original

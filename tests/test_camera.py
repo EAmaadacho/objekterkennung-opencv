@@ -5,7 +5,8 @@ import numpy as np
 import pytest
 
 from objekterkennung.capture import camera
-from objekterkennung.capture.camera import FRAME_HEIGHT, FRAME_WIDTH, CameraError, open_camera, read_frame
+from objekterkennung.capture.camera import CameraError, open_camera, read_frame
+from objekterkennung.config import Camera
 
 MISSING_CAMERA_INDEX = 99
 
@@ -51,8 +52,8 @@ class FakeOpenCamera:
 def test_A6_missing_camera_gives_clear_error():
     index = MISSING_CAMERA_INDEX
 
-    with pytest.raises(CameraError, match="camera_index"):
-        open_camera(index)
+    with pytest.raises(CameraError, match="number"):
+        open_camera(Camera(index, 1920, 1080))
 
 
 def test_A6_read_frame_returns_the_image():
@@ -74,10 +75,10 @@ def test_A6_lost_camera_gives_clear_error():
 def test_A6_camera_is_asked_for_full_hd(monkeypatch):
     monkeypatch.setattr(camera.cv2, "VideoCapture", FakeOpenCamera)
 
-    capture = open_camera(1)
+    capture = open_camera(Camera(1, 1920, 1080))
 
-    assert capture.requested[cv2.CAP_PROP_FRAME_WIDTH] == FRAME_WIDTH
-    assert capture.requested[cv2.CAP_PROP_FRAME_HEIGHT] == FRAME_HEIGHT
+    assert capture.requested[cv2.CAP_PROP_FRAME_WIDTH] == 1920
+    assert capture.requested[cv2.CAP_PROP_FRAME_HEIGHT] == 1080
 
 
 def test_A6_single_failed_read_is_retried():

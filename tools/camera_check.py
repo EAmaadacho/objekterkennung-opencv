@@ -24,10 +24,10 @@ ZOOM_STEP = 10
 
 def main():
     settings = load_settings()
-    capture = open_camera(settings.camera_index)
+    capture = open_camera(settings.camera)
     width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    print(f"Camera {settings.camera_index} ({capture.getBackendName()}): {width} x {height} pixels")
+    print(f"Camera {settings.camera.number} ({capture.getBackendName()}): {width} x {height} pixels")
     _print_zoom(capture)
     print("Keys: - = zoom out, + = zoom in, e = driver settings, q = quit")
     try:
