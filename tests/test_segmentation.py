@@ -11,6 +11,8 @@ WHITE = (255, 255, 255)
 RED = (40, 30, 210)
 DARK_RED = (25, 20, 130)
 SEAM = (20, 15, 90)
+# Only slightly darker than RED: the seam between two flush blocks is often this faint.
+FAINT_SEAM = (40, 30, 180)
 BLUE = (200, 90, 30)
 SHADOW_GREY = (150, 150, 150)
 # Measured with the ring light above the field: paper and shadows have hue 100-130 and
@@ -114,6 +116,29 @@ def test_A5_two_flush_cubes_are_split_at_the_visible_seam():
     objects = split_touching(color_mask(field, "red", settings), MIN_AREA_PX, field)
 
     assert len(objects) == 2
+
+
+def test_A5_two_flush_cubes_with_faint_seam_are_split():
+    # The normal edge search misses this seam; the finer one for large areas finds it.
+    settings = load_settings()
+    field = _empty_field()
+    cv2.rectangle(field, (100, 100), (210, 210), RED, -1)
+    cv2.rectangle(field, (212, 100), (322, 210), RED, -1)
+    cv2.line(field, (211, 100), (211, 210), FAINT_SEAM, 2)
+
+    objects = split_touching(color_mask(field, "red", settings), MIN_AREA_PX, field)
+
+    assert len(objects) == 2
+
+
+def test_A5_large_cuboid_without_seam_stays_one_object():
+    settings = load_settings()
+    field = _empty_field()
+    cv2.rectangle(field, (100, 100), (322, 210), RED, -1)
+
+    objects = split_touching(color_mask(field, "red", settings), MIN_AREA_PX, field)
+
+    assert len(objects) == 1
 
 
 def test_A5_darker_side_face_stays_with_its_cube():

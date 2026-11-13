@@ -60,7 +60,7 @@ Wo es geht, nutzt das Programm die Verfahren aus dem Vorlesungsskript. Abgewiche
 | Bild holen, anzeigen | `VideoCapture`, `imshow`, `waitKey`, `np.hstack` | Kap. 1/2 |
 | Farbe | `cvtColor` nach HSV, `inRange` | Kap. 2.2 |
 | Maske säubern | Öffnen/Schließen (`morphologyEx`), Löcher füllen mit `findContours`/`drawContours` | Kap. 5.2, 6.1 |
-| Kante zwischen Klötzen | `GaussianBlur`, `Canny`, `erode`/`dilate` | Kap. 4.1, 4.2, 5.1 |
+| Kante zwischen Klötzen | `GaussianBlur`, `Canny` (bei großen Flächen ein zweiter, feinerer Durchlauf für schwache Nähte), `erode`/`dilate` | Kap. 4.1, 4.2, 5.1 |
 | Flächen, Form, Position | `findContours`, `contourArea`, `minEnclosingCircle`, `moments`, `boundingRect` | Kap. 6.1 |
 | Zwei Prismen als Quadrat | Ausschnitt (ROI), `getRotationMatrix2D`, `warpAffine`, Helligkeitsprofil | Kap. 3.2, 3.3 |
 | Kalibrierung | Schieberegler (`createTrackbar`) | Kap. 4.3.4 |

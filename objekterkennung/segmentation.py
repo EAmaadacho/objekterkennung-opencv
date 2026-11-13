@@ -15,6 +15,12 @@ SEED_RATIO = 0.8
 # Canny thresholds for the visible border between two touching blocks, e.g. two flush cubes.
 EDGE_LOW = 30
 EDGE_HIGH = 90
+# Two blocks of the same colour lying flush often show only a faint seam that these
+# thresholds miss. A second, finer edge search finds it. It is only used for large areas
+# (at least two blocks big), because inside a single cuboid it finds wood grain as well.
+FINE_EDGE_LOW = 10
+FINE_EDGE_HIGH = 30
+FINE_EDGE_AREA_MIN_PX = 16000
 # A seed found between the edges must be a real top face: at least 800 px and 40 px wide.
 # A visible side face is a thin strip and is not used as a seed of its own.
 EDGE_SEED_MIN_PX = 800
@@ -64,10 +70,12 @@ def split_touching(mask, min_area_px, field_image=None):
     edges of the field image cut the area into pieces: two
     cubes lying flush show a dark line between them. If that gives fewer than
     two seeds, the distance transform finds the centre of every object as a
-    "hill" instead. In both cases watershed draws the final border.
+    "hill" instead. Large areas are also searched with finer edges, because the seam
+    between two flush blocks of the same colour can be very faint. In both cases watershed draws the final border.
     Areas smaller than min_area_px are dropped as noise.
     """
-    edges = None if field_image is None else _edges(field_image)
+    edges = None if field_image is None else _edges(field_image, EDGE_LOW, EDGE_HIGH)
+    fine_edges = None if field_image is None else _edges(field_image, FINE_EDGE_LOW, FINE_EDGE_HIGH)
     objects = []
     for part in areas(mask):
         if np.count_nonzero(part) < min_area_px:
@@ -80,15 +88,22 @@ def split_touching(mask, min_area_px, field_image=None):
             objects.extend(split_touching(clean_mask(rest), min_area_px, field_image))
             continue
         seeds = None if edges is None else _edge_seeds(part, edges, field_image)
-        if seeds is not None and len(areas(seeds)) >= 2:
+        count = 0 if seeds is None else len(areas(seeds))
+        if fine_edges is not None and np.count_nonzero(part) >= FINE_EDGE_AREA_MIN_PX:
+            fine_seeds = _edge_seeds(part, fine_edges, field_image)
+            fine_count = len(areas(fine_seeds))
+            # The finer search is only trusted if it finds more top faces.
+            if fine_count > count:
+                seeds, count = fine_seeds, fine_count
+        if count >= 2:
             objects.extend(_watershed(part, seeds, field_image, min_area_px))
         else:
             objects.extend(_split_one_part(part, min_area_px))
     return objects
 
 
-def _edges(field_image):
-    """Canny edges of the field, made 3 px wide so that a thin border line closes.
+def _edges(field_image, low, high):
+    """Canny edges of the field with the thresholds low and high, made 3 px wide so that a thin border line closes.
 
     Every colour channel is searched on its own, because the orange ball and a
     yellow cuboid are almost equally bright and differ only in the green channel.
@@ -96,7 +111,7 @@ def _edges(field_image):
     blurred = cv2.GaussianBlur(field_image, (5, 5), 0)
     edges = np.zeros(field_image.shape[:2], dtype=np.uint8)
     for channel in cv2.split(blurred):
-        edges = edges | cv2.Canny(channel, EDGE_LOW, EDGE_HIGH)
+        edges = edges | cv2.Canny(channel, low, high)
     return cv2.dilate(edges, np.ones((3, 3), np.uint8))
 
 
