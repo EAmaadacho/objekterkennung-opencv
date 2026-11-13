@@ -15,6 +15,7 @@ from objekterkennung.capture.setup_check import (
     check_piece_glare,
     check_setup,
     draw_setup,
+    field_centre_lines,
     is_start_click,
 )
 from objekterkennung.config import load_settings
@@ -172,6 +173,19 @@ def test_A6_setup_view_fits_the_screen_and_has_a_start_button():
     assert view.shape[1] <= WINDOW_MAX_WIDTH
     assert is_start_click((left + right) // 2, (top + bottom) // 2)
     assert not is_start_click(right + 10, top)
+
+
+def test_A6_centre_cross_runs_through_the_middle_of_the_field():
+    square = np.float32([[0, 0], [100, 0], [100, 100], [0, 100]])
+    # Seen at a slant: the far edge (top) looks shorter, so the middle lies closer to it.
+    slanted = np.float32([[10, 0], [90, 0], [100, 100], [0, 100]])
+
+    (down_start, down_end), (across_start, across_end) = field_centre_lines(square)
+    _, (slanted_start, slanted_end) = field_centre_lines(slanted)
+
+    assert np.allclose([down_start, down_end], [[50, 0], [50, 100]])
+    assert np.allclose([across_start, across_end], [[0, 50], [100, 50]])
+    assert slanted_start[1] == slanted_end[1] < 50
 
 
 def _draw_board(board):

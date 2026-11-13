@@ -116,6 +116,27 @@ def field_corners(homography, board):
     return cv2.perspectiveTransform(field, np.linalg.inv(homography)).reshape(4, 2)
 
 
+def field_centre_lines(corners):
+    """The two lines through the middle of the field in the camera image, as (start, end) pairs.
+
+    In a slanted view the middle of each edge is not where it seems, so the lines are found
+    with homogeneous coordinates: np.cross of two points is the line through them, np.cross
+    of two lines is their crossing point. The centre is where the diagonals cross. Each centre
+    line also runs through the point where the two field edges beside it meet (far away, or
+    at infinity when they are parallel), and it ends on the other two edges.
+    """
+    top_left, top_right, bottom_right, bottom_left = (np.append(point, 1.0) for point in corners)
+    centre = np.cross(np.cross(top_left, bottom_right), np.cross(top_right, bottom_left))
+    top, bottom = np.cross(top_left, top_right), np.cross(bottom_left, bottom_right)
+    left, right = np.cross(top_left, bottom_left), np.cross(top_right, bottom_right)
+    lines = []
+    for side_a, side_b, end_a, end_b in ((left, right, top, bottom), (top, bottom, left, right)):
+        centre_line = np.cross(centre, np.cross(side_a, side_b))
+        start, end = np.cross(centre_line, end_a), np.cross(centre_line, end_b)
+        lines.append((start[:2] / start[2], end[:2] / end[2]))
+    return lines
+
+
 def check_size(corners, shape):
     """How much of the image height the field fills."""
     height = (_length(corners[0], corners[3]) + _length(corners[1], corners[2])) / 2
@@ -254,6 +275,10 @@ def draw_setup(frame, checks, corners):
     if corners is not None:
         worst = _worst(checks[1:4])
         cv2.drawContours(image, [np.int32(corners * scale)], -1, LEVEL_COLORS[worst], 3)
+        # A cross through the middle of the field, in the same colour: when the camera is
+        # centred, it lies on the grey cross through the middle of the image.
+        for start, end in field_centre_lines(corners * scale):
+            cv2.line(image, np.int32(np.round(start)), np.int32(np.round(end)), LEVEL_COLORS[worst], 2)
         _draw_level(image, camera_lean(corners))
     panel = np.full((height, PANEL_WIDTH, 3), 40, dtype=np.uint8)
     cv2.putText(panel, "SETUP: camera and light", (20, 32), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2)
