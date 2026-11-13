@@ -17,6 +17,11 @@ LABEL_SCALE = 0.42
 LABEL_LINE_PX = 15
 LABEL_PADDING_PX = 4
 DOT_GAP_PX = 10
+# Smaller labels for objects lying close together, and how far a label may move to make room.
+LABEL_SMALL_SCALE = 0.34
+LABEL_SMALL_LINE_PX = 12
+LABEL_SHIFT_STEP_PX = 6
+LABEL_SHIFT_MAX_PX = 48
 DOT_COLOR = (255, 0, 255)
 # Wider windows do not fit on a laptop screen; the camera image is shrunk instead of the field.
 MAX_WINDOW_WIDTH = 1400
@@ -80,30 +85,66 @@ def draw_objects(field_image, objects, board):
     The label is a small dark box with white text, so it can be read on every colour:
     colour and shape above the centre, a dot at the measured centre, the position below.
     The box is half transparent, so the colour of the object still shows through.
+    Labels of objects lying close together get a smaller font; if two boxes still
+    overlap, the later one moves up or down and a thin line joins it to its dot.
     """
     result = field_image.copy()
-    for item in objects:
-        center = unit_to_pixel(item.x, item.y, board)
-        above = [item.color, SHAPE_LABELS.get(item.shape, item.shape)]
-        below = [item.compact_position()]
-        sizes = [cv2.getTextSize(line, cv2.FONT_HERSHEY_SIMPLEX, LABEL_SCALE, 1)[0] for line in above + below]
-        half_width = max(width for width, _ in sizes) // 2 + LABEL_PADDING_PX
-        top = center[1] - len(above) * LABEL_LINE_PX - DOT_GAP_PX // 2 - LABEL_PADDING_PX
-        bottom = center[1] + len(below) * LABEL_LINE_PX + DOT_GAP_PX // 2 + LABEL_PADDING_PX
-        box = (slice(max(top, 0), max(bottom, 0)), slice(max(center[0] - half_width, 0), max(center[0] + half_width, 0)))
-        result[box] = (result[box] * (1 - LABEL_BOX_ALPHA) + np.array(LABEL_BOX_COLOR) * LABEL_BOX_ALPHA).astype(np.uint8)
-        for number, line in enumerate(above):
-            _put_centred(result, line, center[0], top + LABEL_PADDING_PX + (number + 1) * LABEL_LINE_PX - 3)
-        for number, line in enumerate(below):
-            _put_centred(result, line, center[0], center[1] + DOT_GAP_PX // 2 + (number + 1) * LABEL_LINE_PX - 3)
+    centers = [unit_to_pixel(item.x, item.y, board) for item in objects]
+    full = [_label_box(item, center, LABEL_SCALE, LABEL_LINE_PX) for item, center in zip(objects, centers)]
+    placed = []
+    for number, (item, center) in enumerate(zip(objects, centers)):
+        crowded = any(_overlap(full[number], other) for index, other in enumerate(full) if index != number)
+        scale, line_px = (LABEL_SMALL_SCALE, LABEL_SMALL_LINE_PX) if crowded else (LABEL_SCALE, LABEL_LINE_PX)
+        shift = 0
+        for shift in [0] + [sign * step for step in range(LABEL_SHIFT_STEP_PX, LABEL_SHIFT_MAX_PX + 1, LABEL_SHIFT_STEP_PX) for sign in (-1, 1)]:
+            box = _label_box(item, (center[0], center[1] + shift), scale, line_px)
+            if not any(_overlap(box, other) for other in placed):
+                break
+        placed.append(box)
+        if shift:
+            cv2.line(result, center, (center[0], center[1] + shift), LABEL_COLOR, 1, cv2.LINE_AA)
+        _draw_label(result, item, (center[0], center[1] + shift), box, scale, line_px)
+    for center in centers:
         cv2.circle(result, center, 4, DOT_COLOR, -1)
     return result
 
 
-def _put_centred(image, text, center_x, baseline_y):
+def _label_lines(item):
+    """The text above and below the dot, e.g. (["red", "cube"], ["(0.42|0.71)"])."""
+    return [item.color, SHAPE_LABELS.get(item.shape, item.shape)], [item.compact_position()]
+
+
+def _label_box(item, center, scale, line_px):
+    """The rectangle (left, top, right, bottom) that the label of one object covers."""
+    above, below = _label_lines(item)
+    width = max(cv2.getTextSize(line, cv2.FONT_HERSHEY_SIMPLEX, scale, 1)[0][0] for line in above + below)
+    half_width = width // 2 + LABEL_PADDING_PX
+    top = center[1] - len(above) * line_px - DOT_GAP_PX // 2 - LABEL_PADDING_PX
+    bottom = center[1] + len(below) * line_px + DOT_GAP_PX // 2 + LABEL_PADDING_PX
+    return center[0] - half_width, top, center[0] + half_width, bottom
+
+
+def _overlap(first, second):
+    """True if two rectangles (left, top, right, bottom) cover a common pixel."""
+    return first[0] < second[2] and second[0] < first[2] and first[1] < second[3] and second[1] < first[3]
+
+
+def _draw_label(image, item, center, box, scale, line_px):
+    """Darkens the box (numpy slices) and writes the lines centred into it."""
+    left, top, right, bottom = (max(value, 0) for value in box)
+    area = image[top:bottom, left:right]
+    image[top:bottom, left:right] = (area * (1 - LABEL_BOX_ALPHA) + np.array(LABEL_BOX_COLOR) * LABEL_BOX_ALPHA).astype(np.uint8)
+    above, below = _label_lines(item)
+    for number, line in enumerate(above):
+        _put_centred(image, line, center[0], box[1] + LABEL_PADDING_PX + (number + 1) * line_px - 3, scale)
+    for number, line in enumerate(below):
+        _put_centred(image, line, center[0], center[1] + DOT_GAP_PX // 2 + (number + 1) * line_px - 3, scale)
+
+
+def _put_centred(image, text, center_x, baseline_y, scale):
     """Writes white text so that its middle lies at center_x."""
-    (width, _), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, LABEL_SCALE, 1)
-    cv2.putText(image, text, (center_x - width // 2, baseline_y), cv2.FONT_HERSHEY_SIMPLEX, LABEL_SCALE, LABEL_COLOR, 1, cv2.LINE_AA)
+    (width, _), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, scale, 1)
+    cv2.putText(image, text, (center_x - width // 2, baseline_y), cv2.FONT_HERSHEY_SIMPLEX, scale, LABEL_COLOR, 1, cv2.LINE_AA)
 
 
 def draw_notice(image, text):

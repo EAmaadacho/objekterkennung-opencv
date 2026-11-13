@@ -17,6 +17,7 @@ from objekterkennung.display import (
     draw_notice,
     draw_objects,
 )
+from objekterkennung.board import unit_to_pixel
 from objekterkennung.models import DetectedObject
 
 GREEN = (0, 255, 0)
@@ -125,3 +126,16 @@ def test_A4_click_on_a_button_gives_its_name():
     names = [button_at(pause_x, 20), button_at(pause_x, STATUS_HEIGHT_PX + 50), button_at(1300, 20)]
 
     assert names == ["pause", None, None]
+
+
+def test_A3_labels_of_close_objects_do_not_cover_each_other():
+    board = load_settings().board
+    field = np.full((700, 700, 3), 255, dtype=np.uint8)
+    cubes = [DetectedObject("cube", "red", 0.5, 0.5), DetectedObject("cube", "blue", 0.5, 0.45)]
+
+    result = draw_objects(field, cubes, board)
+
+    # Both dots stay visible at their own position; the second label moved away to make room.
+    first, second = (unit_to_pixel(item.x, item.y, board) for item in cubes)
+    assert tuple(result[first[1], first[0]]) == DOT_COLOR
+    assert tuple(result[second[1], second[0]]) == DOT_COLOR
