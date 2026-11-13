@@ -200,13 +200,13 @@ def check_light(field_image):
     else:
         return Check("Light", OK, text)
     if brightness < BRIGHTNESS_GOOD:
-        hint = f"lamp brighter (too dark, target paper {BRIGHTNESS_GOOD}-{BRIGHTNESS_GOOD_MAX})"
+        hint = f"too dark: lamp brighter (target {BRIGHTNESS_GOOD}-{BRIGHTNESS_GOOD_MAX})"
     elif glare > GLARE_GOOD or brightness > BRIGHTNESS_TOO_HIGH:
         hint = "lamp darker or higher (glare)"
     elif evenness < EVENNESS_GOOD:
         hint = "lamp more to the middle (uneven)"
     else:
-        hint = f"lamp one step darker (target paper {BRIGHTNESS_GOOD}-{BRIGHTNESS_GOOD_MAX})"
+        hint = f"lamp one step darker (target {BRIGHTNESS_GOOD}-{BRIGHTNESS_GOOD_MAX})"
     return Check("Light", level, f"{text} - {hint}")
 
 
