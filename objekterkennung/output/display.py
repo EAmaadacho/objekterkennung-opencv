@@ -7,36 +7,46 @@ from objekterkennung.capture.board import unit_to_pixel
 from objekterkennung.output.models import SHAPE_LABELS
 
 NO_FIELD_TEXT = "Field not found"
-TEXT_COLOR = (0, 0, 255)
-MARKER_COLOR = (0, 255, 0)
-LABEL_COLOR = (255, 255, 255)
+# One look for every window: soft colours on dark grey, round corners, smooth text (cv2.LINE_AA).
+# Colours are BGR.
+FONT = cv2.FONT_HERSHEY_SIMPLEX
+PANEL_COLOR = (32, 30, 28)
+CARD_COLOR = (58, 54, 50)
+WHITE = (245, 245, 245)
+MUTED_COLOR = (160, 155, 150)
+GREEN = (110, 200, 70)
+AMBER = (50, 185, 250)
+RED = (90, 90, 245)
+MARKER_COLOR = GREEN
+LABEL_COLOR = WHITE
 # Label on the object: white text on a dark, half transparent box is readable on every colour.
-LABEL_BOX_COLOR = (30, 30, 30)
-LABEL_BOX_ALPHA = 0.65
+LABEL_BOX_COLOR = (30, 28, 26)
+LABEL_BOX_ALPHA = 0.7
+LABEL_RADIUS_PX = 6
 LABEL_SCALE = 0.42
 LABEL_LINE_PX = 15
-LABEL_PADDING_PX = 4
+LABEL_PADDING_PX = 5
 DOT_GAP_PX = 10
 # Smaller labels for objects lying close together, and how far a label may move to make room.
 LABEL_SMALL_SCALE = 0.34
 LABEL_SMALL_LINE_PX = 12
 LABEL_SHIFT_STEP_PX = 6
 LABEL_SHIFT_MAX_PX = 48
-DOT_COLOR = (255, 0, 255)
+DOT_COLOR = WHITE
 # Wider windows do not fit on a laptop screen; the camera image is shrunk instead of the field.
 MAX_WINDOW_WIDTH = 1400
 # Status bar above the window with buttons for the mouse; each button also has a key.
 STATUS_HEIGHT_PX = 50
-STATUS_BACKGROUND = (40, 40, 40)
-STATUS_TEXT_COLOR = (255, 255, 255)
-STATUS_ON_COLOR = (0, 0, 220)
-STATUS_PAUSE_COLOR = (0, 160, 255)
-STATUS_OFF_COLOR = (90, 90, 90)
-STATUS_LIVE_COLOR = (0, 200, 0)
-# During a pause the whole window gets an orange frame of this width, so the pause is seen at once.
-PAUSE_FRAME_PX = 8
+STATUS_BACKGROUND = PANEL_COLOR
+STATUS_TEXT_COLOR = WHITE
+STATUS_ON_COLOR = RED
+STATUS_PAUSE_COLOR = AMBER
+STATUS_OFF_COLOR = CARD_COLOR
+STATUS_LIVE_COLOR = GREEN
+# During a pause the whole window gets an amber frame of this width, so the pause is seen at once.
+PAUSE_FRAME_PX = 6
 # (name, left edge, right edge) of every button in pixels.
-BUTTONS = [("protocol", 6, 306), ("pause", 314, 574), ("quit", 582, 702)]
+BUTTONS = [("protocol", 8, 300), ("pause", 310, 560), ("quit", 570, 690)]
 KEY_HELP = "c = calibrate"
 
 
@@ -45,9 +55,8 @@ def draw_markers(image, markers):
     result = image.copy()
     for marker_id, corners in markers.items():
         points = corners.astype(np.int32)
-        cv2.drawContours(result, [points], -1, MARKER_COLOR, 2)
-        top_left = (int(points[0][0]), int(points[0][1]) - 8)
-        cv2.putText(result, str(marker_id), top_left, cv2.FONT_HERSHEY_SIMPLEX, 0.8, MARKER_COLOR, 2)
+        cv2.polylines(result, [points], True, MARKER_COLOR, 2, cv2.LINE_AA)
+        put_text(result, str(marker_id), (int(points[0][0]), int(points[0][1]) - 8), 0.7, MARKER_COLOR, 2)
     return result
 
 
@@ -62,12 +71,11 @@ def compose_window(camera_image, field_image):
     """
     if field_image is None:
         result = _fit(camera_image, camera_image.shape[0], MAX_WINDOW_WIDTH)
-        cv2.putText(result, NO_FIELD_TEXT, (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1.0, TEXT_COLOR, 2)
-        return result
+        return draw_notice(result, NO_FIELD_TEXT)
     height = field_image.shape[0]
     camera_scaled = _fit(camera_image, height, MAX_WINDOW_WIDTH - field_image.shape[1])
     # np.hstack needs two images of the same height.
-    padded = np.zeros((height, camera_scaled.shape[1], 3), dtype=np.uint8)
+    padded = np.full((height, camera_scaled.shape[1], 3), PANEL_COLOR, dtype=np.uint8)
     padded[: camera_scaled.shape[0]] = camera_scaled
     return np.hstack([padded, field_image])
 
@@ -105,7 +113,7 @@ def draw_objects(field_image, objects, board):
             cv2.line(result, center, (center[0], center[1] + shift), LABEL_COLOR, 1, cv2.LINE_AA)
         _draw_label(result, item, (center[0], center[1] + shift), box, scale, line_px)
     for center in centers:
-        cv2.circle(result, center, 4, DOT_COLOR, -1)
+        cv2.circle(result, center, 4, DOT_COLOR, -1, cv2.LINE_AA)
     return result
 
 
@@ -117,7 +125,7 @@ def _label_lines(item):
 def _label_box(item, center, scale, line_px):
     """The rectangle (left, top, right, bottom) that the label of one object covers."""
     above, below = _label_lines(item)
-    width = max(cv2.getTextSize(line, cv2.FONT_HERSHEY_SIMPLEX, scale, 1)[0][0] for line in above + below)
+    width = max(cv2.getTextSize(line, FONT, scale, 1)[0][0] for line in above + below)
     half_width = width // 2 + LABEL_PADDING_PX
     top = center[1] - len(above) * line_px - DOT_GAP_PX // 2 - LABEL_PADDING_PX
     bottom = center[1] + len(below) * line_px + DOT_GAP_PX // 2 + LABEL_PADDING_PX
@@ -130,10 +138,13 @@ def _overlap(first, second):
 
 
 def _draw_label(image, item, center, box, scale, line_px):
-    """Darkens the box (numpy slices) and writes the lines centred into it."""
+    """Draws the half transparent box with round corners and writes the lines centred into it."""
     left, top, right, bottom = (max(value, 0) for value in box)
     area = image[top:bottom, left:right]
-    image[top:bottom, left:right] = (area * (1 - LABEL_BOX_ALPHA) + np.array(LABEL_BOX_COLOR) * LABEL_BOX_ALPHA).astype(np.uint8)
+    shaded = area.copy()
+    rounded_box(shaded, (0, 0, right - left - 1, bottom - top - 1), LABEL_BOX_COLOR, LABEL_RADIUS_PX)
+    # cv2.addWeighted mixes the box with the picture below it (script ch. 4.1.7).
+    cv2.addWeighted(shaded, LABEL_BOX_ALPHA, area, 1 - LABEL_BOX_ALPHA, 0, dst=area)
     above, below = _label_lines(item)
     for number, line in enumerate(above):
         _put_centred(image, line, center[0], box[1] + LABEL_PADDING_PX + (number + 1) * line_px - 3, scale)
@@ -143,24 +154,25 @@ def _draw_label(image, item, center, box, scale, line_px):
 
 def _put_centred(image, text, center_x, baseline_y, scale):
     """Writes white text so that its middle lies at center_x."""
-    (width, _), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, scale, 1)
-    cv2.putText(image, text, (center_x - width // 2, baseline_y), cv2.FONT_HERSHEY_SIMPLEX, scale, LABEL_COLOR, 1, cv2.LINE_AA)
+    (width, _), _ = cv2.getTextSize(text, FONT, scale, 1)
+    put_text(image, text, (center_x - width // 2, baseline_y), scale, LABEL_COLOR)
 
 
 def draw_notice(image, text):
-    """Writes a red notice into the top-left corner of a copy, e.g. "Hand in field - reports paused"."""
+    """Shows a notice as a red pill in the top-left corner of a copy, e.g. "Hand in field - reports paused"."""
     result = image.copy()
-    cv2.putText(result, text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, TEXT_COLOR, 2)
+    (width, _), _ = cv2.getTextSize(text, FONT, 0.6, 2)
+    rounded_box(result, (10, 10, 10 + width + 28, 44), RED, 17)
+    put_text(result, text, (24, 34), 0.6, WHITE, 2)
     return result
 
 
 def add_status_bar(window, protocol_running, paused):
     """Puts a dark bar with buttons above the window; it shows whether the protocol runs and whether there is a pause.
 
-    The protocol button is red while a protocol runs, the pause button orange during
-    a pause, and a pause also gets an orange frame around the whole window. Next to the
-    buttons one line says in words what the program is doing right now.
-    The buttons are plain filled rectangles (numpy slices) with text.
+    The protocol button is red while a protocol runs, the pause button amber during
+    a pause, and a pause also gets an amber frame around the whole window. Next to the
+    buttons a dot and one line say in words what the program is doing right now.
     """
     result = window.copy()
     if paused:
@@ -168,24 +180,26 @@ def add_status_bar(window, protocol_running, paused):
         result[-PAUSE_FRAME_PX:] = STATUS_PAUSE_COLOR
         result[:, :PAUSE_FRAME_PX] = STATUS_PAUSE_COLOR
         result[:, -PAUSE_FRAME_PX:] = STATUS_PAUSE_COLOR
-    bar = np.zeros((STATUS_HEIGHT_PX, window.shape[1], 3), dtype=np.uint8)
-    bar[:] = STATUS_BACKGROUND
+    bar = np.full((STATUS_HEIGHT_PX, window.shape[1], 3), STATUS_BACKGROUND, dtype=np.uint8)
     labels = {
-        "protocol": ("REC - stop protocol (p)", STATUS_ON_COLOR) if protocol_running else ("Start protocol (p)", STATUS_OFF_COLOR),
-        "pause": ("PAUSED - resume (u)", STATUS_PAUSE_COLOR) if paused else ("Pause (u)", STATUS_OFF_COLOR),
+        "protocol": ("REC  stop protocol (p)", STATUS_ON_COLOR) if protocol_running else ("Start protocol (p)", STATUS_OFF_COLOR),
+        "pause": ("PAUSED  resume (u)", STATUS_PAUSE_COLOR) if paused else ("Pause (u)", STATUS_OFF_COLOR),
         "quit": ("Quit (q)", STATUS_OFF_COLOR),
     }
-    text_y = STATUS_HEIGHT_PX // 2 + 7
+    text_y = STATUS_HEIGHT_PX // 2 + 6
     for name, left, right in BUTTONS:
         text, color = labels[name]
-        bar[6 : STATUS_HEIGHT_PX - 6, left:right] = color
-        cv2.putText(bar, text, (left + 10, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.6, STATUS_TEXT_COLOR, 2 if color != STATUS_OFF_COLOR else 1)
-    state, state_color = ("PAUSED: nothing is detected or recorded", STATUS_PAUSE_COLOR) if paused else ("LIVE: detecting objects", STATUS_LIVE_COLOR)
+        rounded_box(bar, (left, 8, right, STATUS_HEIGHT_PX - 8), color, (STATUS_HEIGHT_PX - 16) // 2)
+        (width, _), _ = cv2.getTextSize(text, FONT, 0.55, 1)
+        put_text(bar, text, ((left + right - width) // 2, text_y), 0.55, STATUS_TEXT_COLOR, 2 if color != STATUS_OFF_COLOR else 1)
+    state, state_color = ("PAUSED  nothing is detected or recorded", STATUS_PAUSE_COLOR) if paused else ("LIVE  detecting objects", STATUS_LIVE_COLOR)
     if protocol_running and not paused:
         state += ", protocol is recording"
-    cv2.putText(bar, state, (BUTTONS[-1][2] + 16, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.6, state_color, 2)
-    (help_width, _), _ = cv2.getTextSize(KEY_HELP, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
-    cv2.putText(bar, KEY_HELP, (bar.shape[1] - help_width - 10, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, STATUS_TEXT_COLOR, 1)
+    state_x = BUTTONS[-1][2] + 22
+    cv2.circle(bar, (state_x, STATUS_HEIGHT_PX // 2), 6, state_color, -1, cv2.LINE_AA)
+    put_text(bar, state, (state_x + 16, text_y), 0.55, WHITE, 1)
+    (help_width, _), _ = cv2.getTextSize(KEY_HELP, FONT, 0.5, 1)
+    put_text(bar, KEY_HELP, (bar.shape[1] - help_width - 14, text_y), 0.5, MUTED_COLOR, 1)
     return np.vstack([bar, result])
 
 
@@ -197,3 +211,19 @@ def button_at(x, y):
         if left <= x < right:
             return name
     return None
+
+
+def rounded_box(image, box, color, radius):
+    """A filled rectangle (left, top, right, bottom) with round corners: two rectangles and four circles."""
+    left, top, right, bottom = box
+    radius = min(radius, (right - left) // 2, (bottom - top) // 2)
+    cv2.rectangle(image, (left + radius, top), (right - radius, bottom), color, -1)
+    cv2.rectangle(image, (left, top + radius), (right, bottom - radius), color, -1)
+    for x in (left + radius, right - radius):
+        for y in (top + radius, bottom - radius):
+            cv2.circle(image, (x, y), radius, color, -1, cv2.LINE_AA)
+
+
+def put_text(image, text, origin, size, color, thickness=1):
+    """Text with smooth edges (cv2.LINE_AA)."""
+    cv2.putText(image, text, origin, FONT, size, color, thickness, cv2.LINE_AA)

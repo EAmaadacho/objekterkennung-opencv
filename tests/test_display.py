@@ -6,7 +6,9 @@ from objekterkennung.capture.board import unit_to_pixel
 from objekterkennung.config import load_settings
 from objekterkennung.output.display import (
     DOT_COLOR,
+    MARKER_COLOR,
     MAX_WINDOW_WIDTH,
+    PANEL_COLOR,
     STATUS_HEIGHT_PX,
     STATUS_OFF_COLOR,
     STATUS_ON_COLOR,
@@ -19,8 +21,6 @@ from objekterkennung.output.display import (
     draw_objects,
 )
 from objekterkennung.output.models import DetectedObject
-
-GREEN = (0, 255, 0)
 
 
 def test_A6_window_shows_both_images_side_by_side():
@@ -39,7 +39,8 @@ def test_A6_wide_camera_image_is_shrunk_so_the_window_fits_the_screen():
     window = compose_window(camera_image, field_image)
 
     assert window.shape == (640, MAX_WINDOW_WIDTH, 3)
-    assert window[0, 0].all() and not window[-1, 0].any()
+    # Below the shrunk camera image the window shows the dark panel colour.
+    assert window[0, 0].all() and tuple(window[-1, 0]) == PANEL_COLOR
 
 
 def test_A6_without_field_only_camera_image_with_text():
@@ -57,7 +58,7 @@ def test_A6_markers_are_drawn_without_changing_the_original():
 
     result = draw_markers(image, markers)
 
-    assert (result == GREEN).all(axis=2).any()
+    assert (result == MARKER_COLOR).all(axis=2).any()
     assert not image.any()
 
 

@@ -13,12 +13,25 @@ from objekterkennung.capture.board import (
     straighten_field,
 )
 from objekterkennung.capture.camera import read_frame
-from objekterkennung.output.display import draw_markers
+from objekterkennung.output.display import (
+    AMBER,
+    CARD_COLOR,
+    FONT,
+    GREEN,
+    MUTED_COLOR,
+    PANEL_COLOR,
+    RED,
+    WHITE,
+    draw_markers,
+    put_text,
+    rounded_box,
+)
 
 OK = "ok"
 WARN = "warn"
 BAD = "bad"
-LEVEL_COLORS = {OK: (0, 200, 0), WARN: (0, 200, 255), BAD: (70, 70, 255)}
+LEVEL_COLORS = {OK: GREEN, WARN: AMBER, BAD: RED}
+TEXT_COLOR = WHITE
 # Size: the field should fill this share of the image height. If the markers lie above and
 # below the field in the image, it can fill at most 70 % (180 of 256 mm) before a marker
 # leaves the image; with the paper turned by 90 degrees they lie left and right, and the
@@ -61,11 +74,17 @@ GLARE_MAX = 0.05
 GRID_PARTS = 3
 # Radius of the spirit level around the image centre; its outer ring stands for TILT_MAX.
 LEVEL_RADIUS_PX = 70
+# Strength of the see-through layers (cv2.addWeighted, script ch. 4.1.7): field tint, guide lines, level.
+FIELD_TINT = 0.18
+GUIDE_ALPHA = 0.5
+LEVEL_ALPHA = 0.35
 WINDOW_MAX_WIDTH = 1400
 WINDOW_MAX_HEIGHT = 760
 PANEL_WIDTH = 440
-LINE_HEIGHT = 30
-START_BUTTON = (20, 430, 300, 470)  # left, top, right, bottom in the window
+CARD_TOP = 84
+CARD_HEIGHT = 56
+CARD_GAP = 8
+START_BUTTON = (20, 424, 420, 468)  # left, top, right, bottom in the window
 START_KEYS = (13, 10)  # Enter on Windows and Linux
 QUIT_KEY = "q"
 
@@ -244,62 +263,119 @@ def draw_setup(frame, checks, corners):
     scale = min((WINDOW_MAX_WIDTH - PANEL_WIDTH) / frame.shape[1], WINDOW_MAX_HEIGHT / frame.shape[0])
     image = cv2.resize(draw_markers(frame, find_markers(frame)), None, fx=scale, fy=scale)
     height, width = image.shape[:2]
-    guide = (200, 200, 200)
-    # Guide lines: a cross through the middle and the target square for the field.
-    cv2.line(image, (width // 2, 0), (width // 2, height), guide, 1)
-    cv2.line(image, (0, height // 2), (width, height // 2), guide, 1)
+    # Guide lines, drawn see-through: a cross through the middle and the corners of the target square.
+    guides = image.copy()
+    cv2.line(guides, (width // 2, 0), (width // 2, height), TEXT_COLOR, 1, cv2.LINE_AA)
+    cv2.line(guides, (0, height // 2), (width, height // 2), TEXT_COLOR, 1, cv2.LINE_AA)
     half = round(height * (SIZE_GOOD + SIZE_MAX) / 4)
-    cv2.rectangle(image, (width // 2 - half, height // 2 - half), (width // 2 + half, height // 2 + half), guide, 1)
+    for x_sign in (-1, 1):
+        for y_sign in (-1, 1):
+            corner = (width // 2 + x_sign * half, height // 2 + y_sign * half)
+            cv2.line(guides, corner, (corner[0] - x_sign * 30, corner[1]), TEXT_COLOR, 2, cv2.LINE_AA)
+            cv2.line(guides, corner, (corner[0], corner[1] - y_sign * 30), TEXT_COLOR, 2, cv2.LINE_AA)
+    cv2.addWeighted(guides, GUIDE_ALPHA, image, 1 - GUIDE_ALPHA, 0, dst=image)
     if corners is not None:
-        worst = _worst(checks[1:4])
-        cv2.drawContours(image, [np.int32(corners * scale)], -1, LEVEL_COLORS[worst], 3)
+        color = LEVEL_COLORS[_worst(checks[1:4])]
+        outline = np.int32(np.round(corners * scale))
+        tint = image.copy()
+        cv2.fillPoly(tint, [outline], color)
+        cv2.addWeighted(tint, FIELD_TINT, image, 1 - FIELD_TINT, 0, dst=image)
+        cv2.polylines(image, [outline], True, color, 2, cv2.LINE_AA)
         # A cross through the middle of the field, in the same colour: when the camera is
-        # centred, it lies on the grey cross through the middle of the image.
+        # centred, it lies on the light cross through the middle of the image.
         for start, end in field_centre_lines(corners * scale):
-            cv2.line(image, np.int32(np.round(start)), np.int32(np.round(end)), LEVEL_COLORS[worst], 2)
+            cv2.line(image, np.int32(np.round(start)), np.int32(np.round(end)), color, 2, cv2.LINE_AA)
         _draw_level(image, camera_lean(corners))
-    panel = np.full((height, PANEL_WIDTH, 3), 40, dtype=np.uint8)
-    cv2.putText(panel, "SETUP: camera and light", (20, 32), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2)
+        if checks[3].level != OK:
+            _draw_move_arrow(image, corners.mean(axis=0) * scale, LEVEL_COLORS[checks[3].level])
+    return np.hstack([_draw_panel(checks, height), image])
+
+
+def _draw_move_arrow(image, field_centre, color):
+    """An arrow from the image centre towards the field centre: the way the camera has to move.
+
+    If the field lies left of the middle, the camera hangs too far right; moving it left
+    moves the field to the right in the image, until both crosses lie on each other.
+    """
+    centre = np.array([image.shape[1] // 2, image.shape[0] // 2], dtype=float)
+    start = centre
+    end = tuple(np.int32(np.round(field_centre)))
+    cv2.arrowedLine(image, tuple(np.int32(np.round(start))), end, PANEL_COLOR, 7, cv2.LINE_AA, tipLength=0.25)
+    cv2.arrowedLine(image, tuple(np.int32(np.round(start))), end, color, 4, cv2.LINE_AA, tipLength=0.25)
+    text = "move the camera this way"
+    (width, _), _ = cv2.getTextSize(text, FONT, 0.45, 1)
+    # The label sits beyond the tip of the arrow, so it does not cover the spirit level.
+    direction = (field_centre - centre) / max(1.0, float(np.hypot(*(field_centre - centre))))
+    middle = field_centre + direction * (width // 2 + 30)
+    left = int(np.clip(middle[0] - width // 2 - 12, 0, image.shape[1] - width - 24))
+    top = int(np.clip(middle[1] - 13, 0, image.shape[0] - 26))
+    rounded_box(image, (left, top, left + width + 24, top + 26), PANEL_COLOR, 13)
+    put_text(image, text, (left + 12, top + 18), 0.45, TEXT_COLOR)
+
+
+def _draw_panel(checks, height):
+    """The left panel: one card per traffic light, the START button and the keys."""
+    panel = np.full((height, PANEL_WIDTH, 3), PANEL_COLOR, dtype=np.uint8)
+    put_text(panel, "Setup", (20, 40), 0.95, TEXT_COLOR, 2)
+    put_text(panel, "camera and light", (122, 40), 0.55, MUTED_COLOR)
     for number, check in enumerate(checks):
-        y = 80 + number * 2 * LINE_HEIGHT
-        cv2.circle(panel, (32, y - 6), 11, LEVEL_COLORS[check.level], -1)
-        cv2.putText(panel, check.name, (54, y), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (255, 255, 255), 2)
+        top = CARD_TOP + number * (CARD_HEIGHT + CARD_GAP)
+        rounded_box(panel, (20, top, PANEL_WIDTH - 20, top + CARD_HEIGHT), CARD_COLOR, 10)
+        color = LEVEL_COLORS[check.level]
+        cv2.circle(panel, (44, top + 28), 13, color, 2, cv2.LINE_AA)
+        cv2.circle(panel, (44, top + 28), 7, color, -1, cv2.LINE_AA)
+        put_text(panel, check.name, (70, top + 24), 0.6, TEXT_COLOR, 2)
         # The hint goes in a second line, so it never runs out of the panel.
         status, _, hint = check.text.partition(" - ")
-        cv2.putText(panel, status, (150, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+        put_text(panel, status, (170, top + 24), 0.45, MUTED_COLOR)
         if hint:
-            cv2.putText(panel, hint, (150, y + 22), cv2.FONT_HERSHEY_SIMPLEX, 0.5, LEVEL_COLORS[check.level], 1)
-    left, top, right, bottom = START_BUTTON
+            put_text(panel, hint, (70, top + 46), 0.45, color)
     ready = _worst(checks) == OK
-    panel[top:bottom, left:right] = LEVEL_COLORS[OK] if ready else (90, 90, 90)
-    cv2.putText(panel, "START (Enter)", (left + 60, bottom - 13), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-    note = "all green - ready to start" if ready else "fix the red and yellow points first"
-    cv2.putText(panel, note, (left, bottom + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-    cv2.putText(panel, "q = quit", (left, bottom + 55), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-    return np.hstack([panel, image])
+    left, top, right, bottom = START_BUTTON
+    rounded_box(panel, START_BUTTON, LEVEL_COLORS[OK] if ready else CARD_COLOR, 22)
+    put_text(panel, "START", (left + 160, bottom - 15), 0.7, TEXT_COLOR if ready else MUTED_COLOR, 2)
+    note = "all green - ready to start" if ready else "fix the yellow and red points first"
+    put_text(panel, note, (left, bottom + 26), 0.45, TEXT_COLOR)
+    put_text(panel, "Enter = start    q = quit", (left, bottom + 50), 0.45, MUTED_COLOR)
+    return panel
 
 
 def _draw_level(image, lean):
     """A spirit level around the image centre: the dot shows where the camera leans.
 
-    The dot moves the same way as the lens when the camera is tilted. Inside the
-    small green ring the camera looks straight down (TILT_GOOD), the outer ring is TILT_MAX.
+    The dot moves the same way as the lens when the camera is tilted. Inside the green
+    disc the camera looks straight down (TILT_GOOD), the outer ring is TILT_MAX. An arrow
+    from the dot to the middle shows which way to tilt the lens.
     """
-    centre = (image.shape[1] // 2, image.shape[0] // 2)
+    centre = np.array([image.shape[1] // 2, image.shape[0] // 2])
     good = round(LEVEL_RADIUS_PX * TILT_GOOD / TILT_MAX)
-    cv2.circle(image, centre, LEVEL_RADIUS_PX, LEVEL_COLORS[WARN], 2)
-    cv2.circle(image, centre, good, LEVEL_COLORS[OK], 2)
     # The dot stays on the outer ring when the camera leans even more.
-    x = float(np.clip(lean[0] / TILT_MAX, -1, 1))
-    y = float(np.clip(lean[1] / TILT_MAX, -1, 1))
-    length = max(1.0, float(np.hypot(x, y)))
-    dot = (round(centre[0] + LEVEL_RADIUS_PX * x / length), round(centre[1] + LEVEL_RADIUS_PX * y / length))
-    level = OK if max(abs(lean[0]), abs(lean[1])) <= TILT_GOOD else WARN if max(abs(lean[0]), abs(lean[1])) <= TILT_MAX else BAD
-    cv2.circle(image, dot, 10, LEVEL_COLORS[level], -1)
-    cv2.circle(image, dot, 10, (0, 0, 0), 1)
-    left, top = centre[0] - 105, centre[1] + LEVEL_RADIUS_PX + 6
-    image[top : top + 24, left : left + 210] = (40, 40, 40)
-    cv2.putText(image, "tilt: dot into green ring", (left + 6, top + 17), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+    shift = np.clip(np.array(lean) / TILT_MAX, -1, 1)
+    dot = centre + LEVEL_RADIUS_PX * shift / max(1.0, float(np.hypot(*shift)))
+    lean_share = max(abs(lean[0]), abs(lean[1]))
+    level = OK if lean_share <= TILT_GOOD else WARN if lean_share <= TILT_MAX else BAD
+    hud = image.copy()
+    cv2.circle(hud, tuple(centre), LEVEL_RADIUS_PX + 18, PANEL_COLOR, -1, cv2.LINE_AA)
+    cv2.circle(hud, tuple(centre), good, LEVEL_COLORS[OK], -1, cv2.LINE_AA)
+    cv2.addWeighted(hud, LEVEL_ALPHA, image, 1 - LEVEL_ALPHA, 0, dst=image)
+    cv2.circle(image, tuple(centre), LEVEL_RADIUS_PX, MUTED_COLOR, 1, cv2.LINE_AA)
+    cv2.circle(image, tuple(centre), good, LEVEL_COLORS[OK], 2, cv2.LINE_AA)
+    for direction in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+        start = centre + np.multiply(direction, LEVEL_RADIUS_PX - 6)
+        cv2.line(image, tuple(start), tuple(centre + np.multiply(direction, LEVEL_RADIUS_PX + 6)), MUTED_COLOR, 1, cv2.LINE_AA)
+    dot_px = tuple(np.int32(np.round(dot)))
+    if level != OK:
+        cv2.arrowedLine(image, dot_px, tuple(np.int32(np.round(centre + (dot - centre) * 0.2))),
+                        LEVEL_COLORS[level], 3, cv2.LINE_AA, tipLength=0.35)
+    cv2.circle(image, dot_px, 10, LEVEL_COLORS[level], -1, cv2.LINE_AA)
+    cv2.circle(image, dot_px, 10, TEXT_COLOR, 2, cv2.LINE_AA)
+    if level == OK:
+        return
+    text = "tilt the lens the way the arrow points"
+    (text_width, _), _ = cv2.getTextSize(text, FONT, 0.45, 1)
+    top = centre[1] + LEVEL_RADIUS_PX + 26
+    rounded_box(image, (centre[0] - text_width // 2 - 12, top, centre[0] + text_width // 2 + 12, top + 26), PANEL_COLOR, 13)
+    put_text(image, text, (centre[0] - text_width // 2, top + 18), 0.45, TEXT_COLOR)
 
 
 def is_start_click(x, y):

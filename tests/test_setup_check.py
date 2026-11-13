@@ -12,8 +12,10 @@ from objekterkennung.capture.setup_check import (
     WINDOW_MAX_WIDTH,
     camera_lean,
     check_light,
+    check_centre,
     check_setup,
     check_size,
+    check_straight,
     draw_setup,
     field_centre_lines,
     is_start_click,
@@ -187,6 +189,39 @@ def test_A6_centre_cross_runs_through_the_middle_of_the_field():
     assert np.allclose([down_start, down_end], [[50, 0], [50, 100]])
     assert np.allclose([across_start, across_end], [[0, 50], [100, 50]])
     assert slanted_start[1] == slanted_end[1] < 50
+
+
+def test_A6_arrow_says_move_the_camera_left_when_it_hangs_too_far_right():
+    # Real camera geometry: the camera hangs 60 mm right of the field centre.
+    corners = _field_seen_by_camera(move_x_mm=60)
+
+    check = check_centre(corners, (1080, 1920, 3))
+
+    # The field then lies left of the image centre, so the arrow to it points left.
+    assert corners.mean(axis=0)[0] < 960
+    assert check.text.endswith("move camera left")
+
+
+def test_A6_level_says_tilt_down_when_the_lens_looks_up():
+    # The lens looks 9 degrees towards the top of the image; the camera is moved so the field stays in the middle.
+    corners = _field_seen_by_camera(tilt_up_deg=9, move_y_mm=75)
+
+    lean = camera_lean(corners)
+    check = check_straight(corners)
+
+    # The dot goes up, so the arrow from the dot to the middle points down.
+    assert lean[1] < 0
+    assert check.text.endswith("tilt lens a bit to the bottom")
+
+
+def _field_seen_by_camera(tilt_up_deg=0, move_x_mm=0, move_y_mm=0, height_mm=470):
+    """The four field corners in the image of a camera above the field, x right and y down as on the screen."""
+    focal_px = 1300
+    half = 90
+    field = np.array([[-half, -half, 0], [half, -half, 0], [half, half, 0], [-half, half, 0]], dtype=float)
+    rotation, _ = cv2.Rodrigues(np.radians([-tilt_up_deg, 0, 0]))
+    seen = (rotation @ (field - [move_x_mm, move_y_mm, -height_mm]).T).T
+    return np.float32(seen[:, :2] / seen[:, 2:] * focal_px + [960, 540])
 
 
 def _draw_board(board):
