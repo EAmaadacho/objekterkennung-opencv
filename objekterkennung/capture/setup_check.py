@@ -1,8 +1,8 @@
 """Setup mode before the start: checks camera and light live and shows them as five traffic lights (A6, A7).
 
 The six checks: all four markers seen, field large enough, camera straight above the
-field, field in the middle of the image, paper bright and evenly lit, and all 12 blocks
-found. The last one lets the light be set while the blocks already lie in the field.
+field, field in the middle of the image, paper bright and evenly lit, and all cuboids of a
+test pattern found (4 per colour). The last one lets the light be set on real blocks.
 The file has three parts: the checks, the drawing of the setup window, and the loop that runs it.
 """
 
@@ -39,7 +39,8 @@ from objekterkennung.output.display import (
     show,
     to_image,
 )
-from objekterkennung.output.models import EXPECTED_OBJECTS, SHAPE_NAMES
+from objekterkennung.config import COLOR_NAMES
+from objekterkennung.output.models import SHAPE_NAMES
 from objekterkennung.output.smoothing import FrameSmoother
 
 OK = "ok"
@@ -87,7 +88,11 @@ GLARE_VALUE = 250
 GLARE_GOOD = 0.01
 GLARE_MAX = 0.05
 GRID_PARTS = 3
-# Blocks: green if all 12 are found, yellow if at most this many are missing or extra.
+# Blocks: for the setup, 16 cuboids lie in the field as a test pattern, 4 of every colour,
+# in rows of three. Every colour shows up several times and across the whole field, so a
+# spot with glare or shadow makes a block there fade and go missing.
+SETUP_OBJECTS = Counter({(color, "cuboid"): 4 for color in COLOR_NAMES})
+# Green if all of them are found as cuboids, yellow if at most this many are missing or extra.
 BLOCKS_WARN_MAX = 2
 # The blocks are counted over the last frames, like in the detection, so one unclear frame
 # does not make the light jump.
@@ -290,21 +295,25 @@ def check_light(field_image, light):
 
 
 def check_blocks(objects):
-    """Are all 12 blocks found? Names the missing ones, e.g. "11 of 12 found - missing: red cube".
+    """Are all cuboids of the test pattern found? E.g. "15 of 16 found - missing: red cuboid".
 
-    The blocks lie in the field during the setup, so the lamp can be moved until all of them
-    are found. A block that is missing usually lies in a spot that is too bright or too dark.
+    The cuboids lie in the field during the setup, so the lamp can be moved until all of them
+    are found. A block that is missing usually lies in a spot that is too bright or too dark;
+    one found with the wrong shape is named as extra, e.g. "extra: 2x green cube".
     """
     found = Counter((item.color, item.shape) for item in objects)
-    missing = EXPECTED_OBJECTS - found
-    extra = found - EXPECTED_OBJECTS
-    total = sum(EXPECTED_OBJECTS.values())
-    text = f"{sum((found & EXPECTED_OBJECTS).values())} of {total} found"
+    missing = SETUP_OBJECTS - found
+    extra = found - SETUP_OBJECTS
+    total = sum(SETUP_OBJECTS.values())
+    text = f"{sum((found & SETUP_OBJECTS).values())} of {total} found"
     if not missing and not extra:
         return Check("Blocks", OK, text)
     level = WARN if sum(missing.values()) + sum(extra.values()) <= BLOCKS_WARN_MAX else BAD
     if missing:
-        return Check("Blocks", level, f"{text} - missing: {_block_names(missing)}")
+        hint = f"missing: {_block_names(missing)}"
+        if extra:
+            hint += f", extra: {_block_names(extra)}"
+        return Check("Blocks", level, f"{text} - {hint}")
     return Check("Blocks", level, f"{text} - extra: {_block_names(extra)}")
 
 
@@ -497,7 +506,7 @@ def _edges_in_image(corners):
 
 
 def _block_names(counter):
-    """Short list of blocks, e.g. "2x red cube, blue prism"."""
+    """Short list of blocks, e.g. "2x red cuboid, blue cube"."""
     names = []
     for (color, shape), count in sorted(counter.items(), key=lambda entry: SHAPE_NAMES.index(entry[0][1])):
         names.append(f"{count}x {color} {shape}" if count > 1 else f"{color} {shape}")

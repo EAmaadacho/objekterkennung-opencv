@@ -7,7 +7,7 @@ SHAPE_NAMES = ("cube", "cuboid", "prism", "sphere", "unknown")
 # Words for the output. "prism" alone would also fit a cube, so the prism is called triangular.
 SHAPE_LABELS = {"cube": "cube", "cuboid": "cuboid", "prism": "triangular prism", "sphere": "sphere", "unknown": "unknown"}
 # The 12 blocks of the project as (colour, shape) and how many of each (docs/anforderungen.md).
-# The setup mode counts them, and tools/evaluate_tests.py compares every test layout with them.
+# tools/evaluate_tests.py compares every test layout with them.
 EXPECTED_OBJECTS = Counter({
     ("red", "cube"): 2, ("blue", "cube"): 2, ("yellow", "cuboid"): 2, ("green", "cuboid"): 1,
     ("blue", "prism"): 2, ("red", "prism"): 1, ("red", "sphere"): 1, ("green", "sphere"): 1,

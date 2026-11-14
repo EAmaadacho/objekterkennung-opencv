@@ -101,7 +101,7 @@ Nach dem Start kommt zuerst der **Einrichtungsmodus**. Er prüft live sechs Punk
 - **Straight:** Schaut die Kamera gerade von oben? Dann sind gegenüberliegende Feldseiten gleich lang und das Feld ist nicht verdreht.
 - **Centre:** Liegt das Feld in der Bildmitte?
 - **Light:** Liegt das Papier im Zielbereich 155–170 (Helligkeit 0–255; in diesem Licht wurden die Farbbereiche eingestellt), ist es gleichmäßig ausgeleuchtet und ohne überbelichtete Stellen?
-- **Blocks:** Werden alle 12 Teile erkannt, die schon im Feld liegen? Fehlt eines, steht es dabei, z. B. „missing: red cube“. So lässt sich die Lampe direkt an den Teilen einstellen: Ein Teil, das in einer Spiegelung liegt, wird blass und fehlt.
+- **Blocks:** Zum Einrichten liegt ein Prüfmuster aus 16 Quadern im Feld, je 4 pro Farbe, in Reihen zu dritt über das ganze Feld verteilt. Werden alle als Quader in der richtigen Farbe erkannt? Fehlt einer, steht er dabei, z. B. „missing: red cuboid“. So lässt sich die Lampe direkt an echten Teilen einstellen: Ein Quader in einer Spiegelung wird blass und fehlt.
 
 Zu jeder gelben oder roten Ampel steht, was zu tun ist, z. B. „move camera lower“. Beim Ausrichten helfen ein helles Fadenkreuz durch die Bildmitte und ein Zielrahmen. Durch die Mitte des erkannten Felds läuft ein zweites Kreuz in der Farbe des Feldrahmens; liegt es auf dem hellen Fadenkreuz, hängt die Kamera genau über der Feldmitte. Eine Wasserwaage in der Bildmitte zeigt die Neigung der Kamera. Ist sie zu schräg, zeigt ein Pfeil vom Punkt zur Mitte, wohin die Linse gekippt werden muss. Liegt das Feld nicht in der Mitte, zeigt ein zweiter Pfeil, wohin die Kamera verschoben werden muss.
 
@@ -118,7 +118,7 @@ Was „grün“ bedeutet, ist an den Testaufnahmen vom 12. und 13.11. geprüft:
 | Straight | Neigung ≤ 5 %, Drehung ≤ 2° | Am 13.11. immer erfüllt (etwa 1 %); 5 % verschieben die Oberseite eines Würfels nur um etwa 4 mm. |
 | Centre | Feldmitte ≤ 5 % neben der Bildmitte | Am 12.11. lag das Feld zu weit unten, ein blaues Prisma am Rand erschien abgeschnitten. |
 | Light | Papier 155–170, Gleichmäßigkeit ≥ 65 % | Gleiche Lage, gleiche Software: bei Papier 171 wurden 0 von 16 roten Würfeln erkannt, eine Lampenstufe dunkler (155–161) 18 von 18. Über alle Bilder vom 13.11.: bei grünem Licht 97 % der Teile richtig, sonst 90 %. Im Live-Test vom 14.11. lag das Papier bei 172–182; rote Würfel in der Spiegelung oben rechts hatten nur die halbe Sättigung und fehlten. |
-| Blocks | alle 12 Teile erkannt | Zählt über die letzten 10 Bilder, wie die Erkennung selbst. Prüft die Lage, in der die Erkennung startet, statt nur das Papier. |
+| Blocks | alle 16 Quader des Prüfmusters erkannt | Zählt über die letzten 10 Bilder, wie die Erkennung selbst. Weil die Quader das ganze Feld bedecken, fällt eine zu helle oder zu dunkle Stelle auf, die das Papier allein nicht zeigt. |
 
 Mit `main.py --calibrate` startet der Kalibriermodus: Mit Schiebereglern werden die Farbbereiche an das Licht angepasst und in `config.json` gespeichert.
 
