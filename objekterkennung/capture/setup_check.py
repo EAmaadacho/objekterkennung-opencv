@@ -112,6 +112,8 @@ CARD_GAP = 8
 START_BUTTON = (20, 488, 420, 532)  # left, top, right, bottom in the window
 START_KEYS = (13, 10)  # Enter on Windows and Linux
 QUIT_KEY = "q"
+# Hides all guides on the camera image, so the blocks can be seen as they look in the light.
+GUIDES_KEY = "h"
 
 
 @dataclass(frozen=True)
@@ -317,10 +319,12 @@ def check_blocks(objects):
     return Check("Blocks", level, f"{text} - extra: {_block_names(extra)}")
 
 
-def draw_setup(frame, checks, corners):
+def draw_setup(frame, checks, corners, guides_shown=True):
     """A panel with the six traffic lights on the left, the camera image with guide lines on the right.
 
     The panel is placed next to the image (np.hstack), so it never hides the field.
+    With guides_shown False the camera image stays clean: no crosses, no tint, no spirit
+    level and no arrows, only the marker outlines. The traffic lights keep running.
     """
     # Only the square in the middle is shown, so a turned (upright) camera image is as large as a normal one.
     side = min(frame.shape[:2])
@@ -331,6 +335,8 @@ def draw_setup(frame, checks, corners):
     scale = min((WINDOW_MAX_WIDTH - PANEL_WIDTH) / side, WINDOW_MAX_HEIGHT / side)
     image = cv2.resize(square, None, fx=scale, fy=scale)
     height, width = image.shape[:2]
+    if not guides_shown:
+        return np.hstack([_draw_panel(checks, height, guides_shown), image])
     # Guide lines, drawn see-through: a cross through the middle and the corners of the target square.
     guides = image.copy()
     cv2.line(guides, (width // 2, 0), (width // 2, height), TEXT_COLOR, 1, cv2.LINE_AA)
@@ -356,7 +362,7 @@ def draw_setup(frame, checks, corners):
         _draw_level(image, camera_lean(corners))
         if checks[3].level != OK:
             _draw_move_arrow(image, corners.mean(axis=0) * scale, LEVEL_COLORS[checks[3].level])
-    return np.hstack([_draw_panel(checks, height), image])
+    return np.hstack([_draw_panel(checks, height, guides_shown), image])
 
 
 def _draw_move_arrow(image, field_centre, color):
@@ -381,7 +387,7 @@ def _draw_move_arrow(image, field_centre, color):
     put_text(image, text, (left + 12, top + 18), 0.45, TEXT_COLOR)
 
 
-def _draw_panel(checks, height):
+def _draw_panel(checks, height, guides_shown=True):
     """The left panel: one card per traffic light, the START button and the keys."""
     panel = np.full((height, PANEL_WIDTH, 3), PANEL_COLOR, dtype=np.uint8)
     put_text(panel, "Setup", (20, 40), 0.95, TEXT_COLOR, 2)
@@ -404,7 +410,8 @@ def _draw_panel(checks, height):
     put_text(panel, "START", (left + 160, bottom - 15), 0.7, TEXT_COLOR if ready else MUTED_COLOR, 2)
     note = "all green - ready to start" if ready else "fix the yellow and red points first"
     put_text(panel, note, (left, bottom + 26), 0.45, TEXT_COLOR)
-    put_text(panel, "Enter = start    q = quit", (left, bottom + 50), 0.45, MUTED_COLOR)
+    guides = "hide guides" if guides_shown else "show guides"
+    put_text(panel, f"Enter = start    h = {guides}    q = quit", (left, bottom + 50), 0.45, MUTED_COLOR)
     return panel
 
 
@@ -456,11 +463,12 @@ def is_start_click(x, y):
 
 
 def run_setup(capture, settings, window_name):
-    """Shows the setup mode until Enter or START is pressed (returns True) or q (returns False)."""
+    """Shows the setup mode until Enter or START is pressed (returns True) or q (returns False); h hides the guides."""
     clicks = []
     cv2.setMouseCallback(window_name, lambda event, x, y, flags, param: _remember_start(event, window_name, x, y, clicks))
     smoother = FrameSmoother(BLOCKS_FRAMES)
     turns = 0
+    guides_shown = True
     while True:
         frame = read_frame(capture)
         # The image is turned so the field is seen from the front; then "left" or "down" on the
@@ -470,12 +478,14 @@ def run_setup(capture, settings, window_name):
             turns = upright_turns(homography, settings.board)
         frame = turn_upright(frame, turns)
         checks, corners = check_setup(frame, settings, smoother)
-        show(window_name, draw_setup(frame, checks, corners))
+        show(window_name, draw_setup(frame, checks, corners, guides_shown))
         key = cv2.waitKey(1) & 0xFF
         if key in START_KEYS or clicks:
             return True
         if key == ord(QUIT_KEY):
             return False
+        if key == ord(GUIDES_KEY):
+            guides_shown = not guides_shown
 
 
 def _remember_start(event, window_name, x, y, clicks):

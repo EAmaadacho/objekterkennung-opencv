@@ -7,6 +7,7 @@ from objekterkennung.capture.board import ARUCO_DICTIONARY
 from objekterkennung.capture.setup_check import (
     BAD,
     OK,
+    PANEL_WIDTH,
     START_BUTTON,
     WARN,
     WINDOW_MAX_WIDTH,
@@ -215,6 +216,22 @@ def test_A6_setup_view_fits_the_screen_and_has_a_start_button():
     assert view.shape[1] <= WINDOW_MAX_WIDTH
     assert is_start_click((left + right) // 2, (top + bottom) // 2)
     assert not is_start_click(right + 10, top)
+
+
+def test_A6_hidden_guides_show_the_plain_camera_image():
+    settings = load_settings()
+    frame = _draw_board(settings.board)
+    checks, corners = check_setup(frame, settings)
+
+    shown = draw_setup(frame, checks, corners)
+    hidden = draw_setup(frame, checks, corners, guides_shown=False)
+
+    camera = slice(PANEL_WIDTH, None)
+    assert shown.shape == hidden.shape
+    assert not np.array_equal(shown[:, camera], hidden[:, camera])
+    # Without guides the middle of the image is plain paper, no cross and no spirit level.
+    middle = hidden[hidden.shape[0] // 2, PANEL_WIDTH + (hidden.shape[1] - PANEL_WIDTH) // 2]
+    assert abs(int(middle[0]) - PAPER) <= 2
 
 
 def test_A6_centre_cross_runs_through_the_middle_of_the_field():

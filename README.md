@@ -107,7 +107,7 @@ Zu jeder gelben oder roten Ampel steht, was zu tun ist, z. B. „move camera low
 
 Beide Pfeile werden in jedem Bild neu aus den Markern berechnet. Damit „links“ und „oben“ dieselbe Richtung meinen wie am Tisch, wenn man vor der unteren Feldkante steht, wird das Kamerabild automatisch so gedreht, dass (0,0) unten links liegt, egal wie Kamera oder Blatt stehen. Gedreht wird in Vierteldrehungen (`np.rot90`), weil dabei kein Pixel neu berechnet wird; eine Restdrehung bis 45° meldet die Straight-Ampel („turn paper“). Auch im Hauptfenster ist das Kamerabild so gedreht. Ob die Pfeile richtig herum zeigen, prüfen Tests mit einer nachgerechneten Kamera (Lochkameramodell).
 
-Mit Enter oder dem Button START beginnt die Erkennung; `main.py --skip-setup` überspringt den Modus.
+Mit der Taste `h` lassen sich Kreuze, Wasserwaage, Pfeile und die farbige Feldfläche ausblenden und wieder einblenden. Dann sieht man die hingelegten Steine so, wie sie im Licht wirklich aussehen; die Ampeln laufen weiter. Mit Enter oder dem Button START beginnt die Erkennung; `main.py --skip-setup` überspringt den Modus.
 
 Was „grün“ bedeutet, ist an den Testaufnahmen vom 12. und 13.11. geprüft:
 
