@@ -94,4 +94,5 @@ def _match(old_objects, new_objects):
 
 
 def _distance(first, second):
+    """Distance of two objects in the unit square, e.g. 0.1 is 18 mm on the field."""
     return math.hypot(first.x - second.x, first.y - second.y)

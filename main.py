@@ -1,4 +1,9 @@
-"""Starts the program: reads the webcam, finds the field, detects the objects and reports changes (A4, A6)."""
+"""Starts the program and runs the loop for every camera image (A4, A6).
+
+One pass of the loop: read a frame, find the field by its ArUco markers, straighten it,
+detect the objects, smooth them over the last frames, print the changes and show the window.
+Start: python main.py, or python main.py --calibrate / --skip-setup.
+"""
 
 import argparse
 import sys

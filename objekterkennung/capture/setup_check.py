@@ -1,4 +1,9 @@
-"""Setup mode before the start: checks markers, size, straightness, position and light live (A6, A7)."""
+"""Setup mode before the start: checks camera and light live and shows them as five traffic lights (A6, A7).
+
+The five checks: all four markers seen, field large enough, camera straight above the
+field, field in the middle of the image, paper bright and evenly lit. The file has three
+parts: the checks, the drawing of the setup window, and the loop that runs it.
+"""
 
 from dataclasses import dataclass
 
@@ -98,6 +103,9 @@ class Check:
     name: str
     level: str
     text: str
+
+
+# Part 1: the five checks, each on one camera image.
 
 
 def check_setup(frame, settings):
@@ -257,6 +265,9 @@ def check_light(field_image, light):
     return Check("Light", level, f"{text} - {hint}")
 
 
+# Part 2: drawing the setup window.
+
+
 def draw_setup(frame, checks, corners):
     """A panel with the five traffic lights on the left, the camera image with guide lines on the right.
 
@@ -386,6 +397,9 @@ def _draw_level(image, lean):
     put_text(image, text, (centre[0] - text_width // 2, top + 18), 0.45, TEXT_COLOR)
 
 
+# Part 3: the loop of the setup mode.
+
+
 def is_start_click(x, y):
     """True if a mouse click in the setup window hit the START button."""
     left, top, right, bottom = START_BUTTON
@@ -421,6 +435,9 @@ def _remember_start(event, x, y, clicks):
         clicks.append((x, y))
 
 
+# Small helpers used by the parts above.
+
+
 def _worst(checks):
     """The worst level of some checks: bad before warn before ok."""
     levels = [check.level for check in checks]
@@ -440,4 +457,5 @@ def _edges_in_image(corners):
 
 
 def _length(first, second):
+    """Length of the line between two points in pixels."""
     return float(np.hypot(*(second - first)))

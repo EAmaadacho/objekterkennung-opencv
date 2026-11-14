@@ -1,4 +1,7 @@
-"""Notices a hand or arm in the field, so that the program pauses its reports meanwhile (A4)."""
+"""Notices a hand or arm in the field, so that the program pauses its reports meanwhile (A4).
+
+HSV thresholds (script ch. 7.2), opening (ch. 5.2) and contours (ch. 6.1).
+"""
 
 import cv2
 import numpy as np

@@ -25,6 +25,7 @@ ARUCO_DICTIONARY = cv2.aruco.DICT_4X4_50
 
 
 def main():
+    """Draws field, frame, grid and markers with the sizes from config.json and saves the PDF."""
     board = load_settings().board
     field_left = (PAGE_WIDTH_MM - board.field_size_mm) / 2
     field_top = (PAGE_HEIGHT_MM - board.field_size_mm) / 2

@@ -1,4 +1,8 @@
-"""Finds all objects in the straight field image: colour, shape and position (A1, A2, A3, A5)."""
+"""Finds all objects in the straight field image: colour, shape and position (A1, A2, A3, A5).
+
+This is where the detection starts. It calls segmentation.py (colour masks, touching
+objects), prism_pair.py (two prisms that form a square) and shapes.py (the shape).
+"""
 
 from objekterkennung.capture.board import pixel_to_unit
 from objekterkennung.detection.prism_pair import split_prism_pair

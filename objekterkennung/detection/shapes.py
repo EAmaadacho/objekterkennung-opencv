@@ -1,4 +1,9 @@
-"""Recognises the shape of one object from its outline seen from above (A1)."""
+"""Recognises the shape of one object from its outline seen from above (A1).
+
+Contours, area, moments and the enclosing circle come from script ch. 6.1. The convex hull and
+cv2.minAreaRect replace the corner count with approxPolyDP from exercise 11, which was right
+for only 62 % of the real objects (see README).
+"""
 
 import math
 

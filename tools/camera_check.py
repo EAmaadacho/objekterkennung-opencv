@@ -23,6 +23,7 @@ ZOOM_STEP = 10
 
 
 def main():
+    """Shows the camera image live; e opens the driver settings, + and - change the zoom, q quits."""
     settings = load_settings()
     capture = open_camera(settings.camera)
     width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))

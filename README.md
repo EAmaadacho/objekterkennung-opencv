@@ -42,7 +42,22 @@ docs/                    Anforderungen A1–A7 mit Verweis auf Code und Tests
 .github/                 CI, führt bei jedem Push alle Tests aus
 ```
 
-**Lesereihenfolge:** `main.py` zeigt den Ablauf pro Bild. Danach in der Reihenfolge, in der ein Bild durchs Programm läuft: `capture/board.py` → `detection/detector.py` (ruft `segmentation`, `ball`, `prism_pair` und `shapes` auf) → `output/smoothing.py` → `output/tracker.py` → `output/display.py`.
+## Lesereihenfolge
+
+Die Reihenfolge folgt einem Kamerabild auf seinem Weg durch das Programm. Die Schritte 1 bis 7 sind die eigentliche Erkennung, Schritt 8 zeigt das Ergebnis an.
+
+1. `main.py`: die Schleife, die für jedes Kamerabild läuft. Hier stehen alle Schritte auf einer Seite.
+2. `capture/board.py`: die vier Marker finden, das Feld gerade entzerren und Pixel in Koordinaten (x | y) umrechnen.
+3. `detection/detector.py`: der Einstieg in die Erkennung. Jede Farbe wird für sich gesucht, danach wird jedem Teil eine Form zugeordnet.
+4. `detection/segmentation.py`: die Farbmaske in HSV und das Trennen von Teilen, die sich berühren. Das ist der umfangreichste Schritt.
+5. `detection/shapes.py`: die Regel, nach der aus einem Umriss Würfel, Quader, Prisma oder Kugel wird.
+6. `detection/ball.py` und `detection/prism_pair.py`: zwei Sonderfälle beim Trennen, nämlich eine Kugel an einem gleichfarbigen Quader und zwei Prismen, die zusammen wie ein Würfel aussehen.
+7. `output/smoothing.py` und `output/tracker.py`: die Ergebnisse über mehrere Bilder glätten und Veränderungen melden.
+8. `output/display.py`: das Fenster mit Kamerabild und beschriftetem Feld.
+
+Der Rest dient dem Aufbau und der Bedienung: `capture/setup_check.py` (Einrichtungsmodus), `capture/calibration.py` (Kalibriermodus), `detection/hand.py` (Hand im Feld) und `output/protocol.py` (Protokoll für die Testläufe).
+
+Jede Datei beginnt mit einem kurzen Text, der sagt, welche Anforderung sie umsetzt (A1–A7, siehe [docs/anforderungen.md](docs/anforderungen.md)) und, wo es passt, auf welchem Kapitel des Vorlesungsskripts sie beruht. Die Schwellwerte der Verfahren stehen als benannte Konstanten oben in ihrer Datei, jeweils mit dem Grund für ihren Wert. Die Tests tragen die Kennung der Anforderung im Namen, etwa `test_A5_two_touching_cubes_are_split` in `tests/test_segmentation.py`.
 
 ## Aufbau vor dem Start
 
@@ -79,7 +94,19 @@ python3 -m venv .venv
 .venv/bin/python main.py
 ```
 
-Nach dem Start kommt zuerst der **Einrichtungsmodus**. Er prüft live fünf Punkte und zeigt sie als Ampeln: Sind alle 4 Marker zu sehen? Füllt das Feld genug vom Bild (Ziel: mindestens 35 % der Bildhöhe)? Schaut die Kamera gerade von oben (gegenüberliegende Feldseiten gleich lang, Feld nicht verdreht)? Liegt das Feld in der Bildmitte? Ist das Papier im Zielbereich 155–170 (Helligkeit 0–255; in diesem Licht wurden die Farbbereiche eingestellt), gleichmäßig ausgeleuchtet und ohne überbelichtete Stellen? Zu jeder gelben oder roten Ampel steht, was zu tun ist, z. B. „move camera lower“. Ein Fadenkreuz und ein Zielrahmen helfen beim Ausrichten. Durch die Mitte des erkannten Felds läuft ein zweites Kreuz in der Farbe des Feldrahmens; liegt es auf dem grauen Fadenkreuz, hängt die Kamera genau über der Feldmitte. Eine Wasserwaage in der Bildmitte zeigt die Neigung der Kamera: Ist sie zu schräg, zeigt ein Pfeil vom Punkt zur Mitte, wohin die Linse gekippt werden muss. Liegt das Feld nicht in der Mitte, zeigt ein zweiter Pfeil, wohin die Kamera verschoben werden muss. Beide Pfeile werden in jedem Bild neu aus den Markern berechnet; Das Kamerabild wird dafür automatisch so gedreht, dass (0,0) unten links liegt, egal wie Kamera oder Blatt stehen. „Links“, „oben“ usw. meinen dann dieselbe Richtung wie am Tisch, wenn man vor der unteren Feldkante steht. Gedreht wird in Vierteldrehungen (`np.rot90`), weil dabei kein Pixel neu berechnet wird; eine Restdrehung bis 45° meldet die Straight-Ampel („turn paper“). Auch im Hauptfenster ist das Kamerabild so gedreht. Ob die Pfeile richtig herum zeigen, prüfen Tests mit einer nachgerechneten Kamera (Lochkameramodell). Mit Enter oder dem Button START beginnt die Erkennung; `main.py --skip-setup` überspringt den Modus.
+Nach dem Start kommt zuerst der **Einrichtungsmodus**. Er prüft live fünf Punkte und zeigt sie als Ampeln:
+
+- **Markers:** Sind alle 4 Marker zu sehen?
+- **Size:** Füllt das Feld genug vom Bild (Ziel: mindestens 35 % der Bildhöhe)?
+- **Straight:** Schaut die Kamera gerade von oben? Dann sind gegenüberliegende Feldseiten gleich lang und das Feld ist nicht verdreht.
+- **Centre:** Liegt das Feld in der Bildmitte?
+- **Light:** Liegt das Papier im Zielbereich 155–170 (Helligkeit 0–255; in diesem Licht wurden die Farbbereiche eingestellt), ist es gleichmäßig ausgeleuchtet und ohne überbelichtete Stellen?
+
+Zu jeder gelben oder roten Ampel steht, was zu tun ist, z. B. „move camera lower“. Beim Ausrichten helfen ein helles Fadenkreuz durch die Bildmitte und ein Zielrahmen. Durch die Mitte des erkannten Felds läuft ein zweites Kreuz in der Farbe des Feldrahmens; liegt es auf dem hellen Fadenkreuz, hängt die Kamera genau über der Feldmitte. Eine Wasserwaage in der Bildmitte zeigt die Neigung der Kamera. Ist sie zu schräg, zeigt ein Pfeil vom Punkt zur Mitte, wohin die Linse gekippt werden muss. Liegt das Feld nicht in der Mitte, zeigt ein zweiter Pfeil, wohin die Kamera verschoben werden muss.
+
+Beide Pfeile werden in jedem Bild neu aus den Markern berechnet. Damit „links“ und „oben“ dieselbe Richtung meinen wie am Tisch, wenn man vor der unteren Feldkante steht, wird das Kamerabild automatisch so gedreht, dass (0,0) unten links liegt, egal wie Kamera oder Blatt stehen. Gedreht wird in Vierteldrehungen (`np.rot90`), weil dabei kein Pixel neu berechnet wird; eine Restdrehung bis 45° meldet die Straight-Ampel („turn paper“). Auch im Hauptfenster ist das Kamerabild so gedreht. Ob die Pfeile richtig herum zeigen, prüfen Tests mit einer nachgerechneten Kamera (Lochkameramodell).
+
+Mit Enter oder dem Button START beginnt die Erkennung; `main.py --skip-setup` überspringt den Modus.
 
 Was „grün“ bedeutet, ist an den Testaufnahmen vom 12. und 13.11. geprüft:
 

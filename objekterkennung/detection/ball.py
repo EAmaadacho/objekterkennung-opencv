@@ -1,4 +1,8 @@
-"""Cuts a ball out of an area where it touches a block of the same colour (A1, A5)."""
+"""Cuts a ball out of an area where it touches a block of the same colour (A1, A5).
+
+cv2.HoughCircles is not part of the lecture script. Only its round outline sets a ball
+apart from a block it touches; the README says why the script methods are not enough here.
+"""
 
 import cv2
 import numpy as np

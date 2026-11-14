@@ -1,4 +1,8 @@
-"""Builds the one window: camera image and straight field with the detected objects side by side (A6)."""
+"""Builds the one window: camera image and straight field with the detected objects side by side (A6).
+
+Drawing and showing as in script ch. 2.3 and 3.3.6 (cv2.imshow, np.hstack); the see-through
+labels use cv2.addWeighted (ch. 4.1.7).
+"""
 
 import cv2
 import numpy as np
@@ -65,7 +69,7 @@ def compose_window(camera_image, field_image):
 
     The field keeps its full size so the labels stay readable. The camera image
     gets the field's height, but at most the width that is left up to
-    MAX_WINDOW_WIDTH; if it is lower than the field, black is added below.
+    MAX_WINDOW_WIDTH; if it is lower than the field, the rest below is filled with the panel colour.
     Without a field (no homography yet) only the camera image is shown,
     with the text "Field not found" in the top-left corner.
     """

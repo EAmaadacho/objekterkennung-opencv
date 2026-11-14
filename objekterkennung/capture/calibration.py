@@ -1,4 +1,7 @@
-"""Calibration mode: adjusts the colour ranges to the light with sliders and saves them in config.json (A7)."""
+"""Calibration mode: adjusts the colour ranges to the light with sliders and saves them in config.json (A7).
+
+The sliders are cv2.createTrackbar (script ch. 4.3.4).
+"""
 
 import json
 import re
@@ -31,10 +34,9 @@ HELP_TEXT = "w = save, q = back"
 def run_calibration(capture, path=DEFAULT_CONFIG_PATH):
     """Shows the field and the mask of one colour; the sliders change the HSV range live.
 
-    Hue, minimum saturation and minimum brightness belong to the chosen colour.
-
-    "Colour" selects red (0), yellow (1), green (2) or blue (3). The mask on the
-    right should be white exactly where the blocks of that colour lie.
+    "Colour" selects red (0), yellow (1), green (2) or blue (3). The other sliders set hue,
+    minimum saturation and minimum brightness of that colour. The mask on the right should
+    be white exactly where the blocks of that colour lie. w saves, q goes back.
     """
     settings = load_settings(path)
     hue_ranges = dict(settings.colors.hue_ranges)

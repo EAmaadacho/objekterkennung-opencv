@@ -1,4 +1,4 @@
-"""Opens the USB webcam and reads single frames from it (A6)."""
+"""Opens the USB webcam and reads single frames from it (A6; cv2.VideoCapture, script ch. 9.1)."""
 
 import sys
 

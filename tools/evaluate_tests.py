@@ -36,6 +36,7 @@ SETTLE_SHARE = 0.25
 
 
 def main():
+    """Reads the protocol, cuts it at the pauses and writes one result line per layout."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("protocol", type=Path, help="protocol folder with labels.csv")
     parser.add_argument("--first", type=int, default=1, help="number of the first layout")
@@ -127,6 +128,7 @@ def write_results(rows, output):
 
 
 def _names(counter):
+    """Readable list of blocks, e.g. "2x red cube, 1x blue prism"."""
     return ", ".join(f"{count}x {color} {shape}" for (color, shape), count in sorted(counter.items()))
 
 

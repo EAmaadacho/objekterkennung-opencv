@@ -1,4 +1,7 @@
-"""Splits two triangle prisms that lie together as a square, which from above looks like a cube (A1, A5)."""
+"""Splits two triangle prisms that lie together as a square, which from above looks like a cube (A1, A5).
+
+Uses a cut-out (ROI), cv2.getRotationMatrix2D and cv2.warpAffine from script ch. 3.2 and 3.3.
+"""
 
 import cv2
 import numpy as np

@@ -1,4 +1,9 @@
-"""Separates the coloured objects from the white paper with HSV colour ranges (A2, A5)."""
+"""Finds the objects of one colour and splits objects that touch (A2, A5).
+
+Colour: HSV and cv2.inRange (script ch. 2.2, 7.2), cleaned by opening and closing (ch. 5.2).
+Touching objects: Canny edges (ch. 4.1, 4.2), then watershed, or the distance transform if the
+edges show no border. Both go beyond the script; the README says why.
+"""
 
 import cv2
 import numpy as np
@@ -80,14 +85,15 @@ def clean_mask(mask):
 def split_touching(mask, settings, field_image=None):
     """Splits a colour mask into one mask per object, also when objects touch.
 
-    A ball is cut out first, because it can melt together with a block of the
-    same colour (e.g. the green sphere and the green cuboid). Then the visible
-    edges of the field image cut the area into pieces: two
-    cubes lying flush show a dark line between them. If that gives fewer than
-    two seeds, the distance transform finds the centre of every object as a
-    "hill" instead. Large areas are also searched with finer edges, because the seam
-    between two flush blocks of the same colour can be very faint. In both cases watershed draws the final border.
-    Areas smaller than min_object_area_px (config.json, "detection") are dropped as noise.
+    Every connected area goes through these steps:
+    1. Areas smaller than min_object_area_px (config.json, "detection") are noise and dropped.
+    2. A ball is cut out first, because it can melt together with a block of the same
+       colour, e.g. the green sphere and the green cuboid. The rest starts again at step 1.
+    3. The visible edges of the field image cut the area into top faces ("seeds"): two cubes
+       lying flush show a dark line between them. Large areas are also searched with finer
+       edges, because that seam can be very faint.
+    4. With two or more seeds, watershed draws the border between them. Otherwise the
+       distance transform looks for one "hill" per object and watershed splits there.
     """
     min_area_px = settings.detection.min_object_area_px
     sphere_radius_px = settings.objects.sphere_diameter_mm / 2 * settings.board.px_per_mm()

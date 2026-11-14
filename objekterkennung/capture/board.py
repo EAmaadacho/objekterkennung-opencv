@@ -1,4 +1,8 @@
-"""Finds the four ArUco markers and straightens the field into a square image (A3)."""
+"""Finds the four ArUco markers and straightens the field into a square image (A3).
+
+The homography is not part of the lecture script: the script only has warpAffine, which can
+turn and shift an image but cannot undo a camera that looks at the paper slightly from the side.
+"""
 
 import cv2
 import numpy as np
