@@ -11,6 +11,7 @@ from objekterkennung.capture.setup_check import (
     WARN,
     WINDOW_MAX_WIDTH,
     camera_lean,
+    check_blocks,
     check_centre,
     check_light,
     check_setup,
@@ -21,6 +22,7 @@ from objekterkennung.capture.setup_check import (
     is_start_click,
 )
 from objekterkennung.config import load_settings
+from objekterkennung.output.models import EXPECTED_OBJECTS, DetectedObject
 
 PX_PER_MM = 3
 MARGIN_MM = 50
@@ -28,7 +30,7 @@ MARGIN_MM = 50
 PAPER = 162
 
 
-def test_A6_straight_centred_board_is_all_green():
+def test_A6_straight_centred_board_has_green_camera_and_light():
     settings = load_settings()
     board = settings.board
     frame = _draw_board(board)
@@ -37,8 +39,32 @@ def test_A6_straight_centred_board_is_all_green():
 
     checks, corners = check_setup(frame, settings)
 
-    assert [check.level for check in checks] == [OK, OK, OK, OK, OK]
+    assert [check.level for check in checks[:5]] == [OK, OK, OK, OK, OK]
+    assert checks[5].name == "Blocks" and checks[5].level == BAD
     assert corners is not None
+
+
+def test_A1_all_twelve_blocks_found_is_green():
+    objects = [DetectedObject(shape, color, 0.5, 0.5) for (color, shape), count in EXPECTED_OBJECTS.items() for _ in range(count)]
+
+    check = check_blocks(objects)
+
+    assert check.level == OK and check.text == "12 of 12 found"
+
+
+def test_A1_missing_red_cube_is_named():
+    objects = [DetectedObject(shape, color, 0.5, 0.5) for (color, shape), count in EXPECTED_OBJECTS.items() for _ in range(count)]
+    objects.remove(DetectedObject("cube", "red", 0.5, 0.5))
+
+    check = check_blocks(objects)
+
+    assert check.level == WARN and check.text == "11 of 12 found - missing: red cube"
+
+
+def test_A1_empty_field_is_red():
+    check = check_blocks([])
+
+    assert check.level == BAD and "0 of 12" in check.text
 
 
 def test_A6_small_board_at_the_side_asks_to_move_the_camera():

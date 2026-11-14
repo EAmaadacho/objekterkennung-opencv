@@ -19,6 +19,7 @@ from objekterkennung.output.display import (
     draw_markers,
     draw_notice,
     draw_objects,
+    pad_to_shape,
 )
 from objekterkennung.output.models import DetectedObject
 
@@ -119,6 +120,34 @@ def test_A4_status_bar_is_grey_when_protocol_is_off_and_no_pause():
     assert not _has_color(bar, STATUS_ON_COLOR)
     assert not _has_color(bar, STATUS_PAUSE_COLOR)
     assert _has_color(bar, STATUS_OFF_COLOR)
+
+
+def test_A7_status_bar_shows_the_light_check():
+    window = np.zeros((600, 1094, 3), dtype=np.uint8)
+    light_color = (11, 222, 33)
+
+    result = add_status_bar(window, protocol_running=True, paused=False, light=("Light: lamp one step darker", light_color))
+
+    assert _has_color(result[:STATUS_HEIGHT_PX], light_color)
+
+
+def test_A6_window_is_padded_to_the_shape_of_the_screen():
+    image = np.full((500, 1000, 3), 7, dtype=np.uint8)
+
+    padded, (left, top) = pad_to_shape(image, 1600, 900)
+
+    assert padded.shape[:2] == (562, 1000)
+    assert (left, top) == (0, 31)
+    assert (padded[top : top + 500, left : left + 1000] == 7).all()
+    assert tuple(padded[0, 0]) == PANEL_COLOR
+
+
+def test_A6_window_of_unknown_size_is_not_padded():
+    image = np.zeros((500, 1000, 3), dtype=np.uint8)
+
+    padded, offset = pad_to_shape(image, 0, 0)
+
+    assert padded is image and offset == (0, 0)
 
 
 def test_A4_click_on_a_button_gives_its_name():

@@ -19,7 +19,7 @@ from objekterkennung.capture.board import (
 )
 from objekterkennung.capture.calibration import run_calibration
 from objekterkennung.capture.camera import CameraError, open_camera, read_frame
-from objekterkennung.capture.setup_check import run_setup
+from objekterkennung.capture.setup_check import LEVEL_COLORS, OK, check_light, run_setup
 from objekterkennung.config import load_settings
 from objekterkennung.detection.detector import detect_objects
 from objekterkennung.detection.hand import hand_in_field
@@ -30,6 +30,9 @@ from objekterkennung.output.display import (
     draw_markers,
     draw_notice,
     draw_objects,
+    open_window,
+    show,
+    to_image,
 )
 from objekterkennung.output.protocol import LabelProtocol
 from objekterkennung.output.smoothing import FrameSmoother
@@ -73,10 +76,10 @@ def _run(arguments):
     paused = False
     clicks = []
     try:
+        open_window(WINDOW_NAME)
         # First the setup mode, so camera and light are checked before anything is detected.
         if not arguments.skip_setup and not run_setup(capture, settings, WINDOW_NAME):
             return
-        cv2.namedWindow(WINDOW_NAME)
         # OpenCV calls this function for every mouse event in the window; a left click is kept for the loop.
         cv2.setMouseCallback(WINDOW_NAME, lambda event, x, y, flags, param: _remember_click(event, x, y, clicks))
         print("Started. Keys: p = protocol on/off, u = pause on/off, c = calibration, q = quit")
@@ -84,12 +87,14 @@ def _run(arguments):
             frame = read_frame(capture)
             homography = find_homography(frame, settings.board, last_homography=homography)
             field_view = None
+            light = None
             if paused and homography is not None:
                 # Nothing is detected, reported or recorded, but the field stays visible
                 # so it can be rebuilt. Changes are reported once the pause ends.
                 field_view = draw_notice(straighten_field(frame, homography, settings.board), PAUSE_TEXT)
             elif homography is not None:
                 field = straighten_field(frame, homography, settings.board)
+                light = _light_status(field, settings)
                 hand = hand_in_field(field, settings)
                 raw_objects = []
                 # While a hand is in the field nothing is counted, so a covered block is not reported as removed.
@@ -107,15 +112,15 @@ def _run(arguments):
                 # The camera image is turned like the straight field, so both show the field from the front.
                 camera_view = turn_upright(frame, upright_turns(homography, settings.board))
             window = compose_window(draw_markers(camera_view, find_markers(camera_view)), field_view)
-            window = add_status_bar(window, protocol is not None, paused)
-            cv2.imshow(WINDOW_NAME, window)
+            window = add_status_bar(window, protocol is not None, paused, light)
+            show(WINDOW_NAME, window)
             if protocol is not None and field_view is not None and not paused:
                 protocol.add(raw_objects, objects, field, window)
             # waitKey(1) waits 1 ms for a key and lets the window redraw itself.
             key = cv2.waitKey(1) & 0xFF
             # A click on a button counts like its key.
             if clicks:
-                name = button_at(*clicks.pop(0))
+                name = button_at(*to_image(WINDOW_NAME, *clicks.pop(0)))
                 if name is not None:
                     key = ord(BUTTON_KEYS[name])
             if key == ord(QUIT_KEY):
@@ -142,6 +147,16 @@ def _parse_arguments():
     parser.add_argument("--calibrate", action="store_true", help="open the calibration mode first")
     parser.add_argument("--skip-setup", action="store_true", help="start the detection without the setup mode")
     return parser.parse_args()
+
+
+def _light_status(field, settings):
+    """The light check of the setup mode as a short text with its colour, e.g. ("Light ok", green)."""
+    check = check_light(field, settings.light)
+    if check.level == OK:
+        return "Light ok", LEVEL_COLORS[check.level]
+    # The hint without the target band, e.g. "Light: lamp one step darker".
+    hint = check.text.partition(" - ")[2].split(" (")[0]
+    return f"Light: {hint}", LEVEL_COLORS[check.level]
 
 
 def _remember_click(event, x, y, clicks):

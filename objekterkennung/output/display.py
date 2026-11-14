@@ -4,6 +4,8 @@ Drawing and showing as in script ch. 2.3 and 3.3.6 (cv2.imshow, np.hstack); the 
 labels use cv2.addWeighted (ch. 4.1.7).
 """
 
+import sys
+
 import cv2
 import numpy as np
 
@@ -52,6 +54,74 @@ PAUSE_FRAME_PX = 6
 # (name, left edge, right edge) of every button in pixels.
 BUTTONS = [("protocol", 8, 300), ("pause", 310, 560), ("quit", 570, 690)]
 KEY_HELP = "c = calibrate"
+# The window starts as large as the screen without the taskbar. Windows reports that area;
+# elsewhere a common laptop size is used. The title bar of the window needs about 40 px.
+DEFAULT_SCREEN_SIZE = (1600, 900)
+TITLE_BAR_PX = 40
+SPI_GETWORKAREA = 0x0030
+# Where the content lies inside the shown image of every window, for the mouse clicks.
+_content_offsets = {}
+
+
+def open_window(name):
+    """Opens a window that fills the screen and scales its content with it, also when it is maximised.
+
+    WINDOW_NORMAL lets the window be resized, and OpenCV then scales the image to the window
+    (WINDOW_FREERATIO). show() pads every image to the shape of the window first, so nothing is
+    stretched. Clicks still arrive in pixels of the shown image.
+    """
+    cv2.namedWindow(name, cv2.WINDOW_NORMAL | cv2.WINDOW_FREERATIO)
+    width, height = _screen_size()
+    cv2.resizeWindow(name, width, height - TITLE_BAR_PX)
+    cv2.moveWindow(name, 0, 0)
+
+
+def show(name, image):
+    """Shows an image in a window from open_window, padded with the panel colour to the shape of the window."""
+    try:
+        _, _, width, height = cv2.getWindowImageRect(name)
+    except cv2.error:
+        width, height = 0, 0
+    padded, offset = pad_to_shape(image, width, height)
+    _content_offsets[name] = offset
+    cv2.imshow(name, padded)
+
+
+def pad_to_shape(image, width, height):
+    """Adds panel colour around the image, so it gets the side ratio width : height; returns (image, (left, top)).
+
+    The image stays in the middle. E.g. a 1000 x 500 image for a 1600 x 900 window gets 1000 x 562.
+    Without a known window size (0 x 0) the image stays as it is.
+    """
+    if width <= 0 or height <= 0:
+        return image, (0, 0)
+    image_height, image_width = image.shape[:2]
+    target_width = max(image_width, round(image_height * width / height))
+    target_height = max(image_height, round(image_width * height / width))
+    left = (target_width - image_width) // 2
+    top = (target_height - image_height) // 2
+    padded = np.full((target_height, target_width, 3), PANEL_COLOR, dtype=np.uint8)
+    padded[top : top + image_height, left : left + image_width] = image
+    return padded, (left, top)
+
+
+def to_image(name, x, y):
+    """Turns a mouse position in the shown window into a position in the image before padding."""
+    left, top = _content_offsets.get(name, (0, 0))
+    return x - left, y - top
+
+
+def _screen_size():
+    """Width and height of the screen without the taskbar, in pixels."""
+    if sys.platform != "win32":
+        return DEFAULT_SCREEN_SIZE
+    import ctypes
+    import ctypes.wintypes
+
+    area = ctypes.wintypes.RECT()
+    if not ctypes.windll.user32.SystemParametersInfoW(SPI_GETWORKAREA, 0, ctypes.byref(area), 0):
+        return DEFAULT_SCREEN_SIZE
+    return area.right - area.left, area.bottom - area.top
 
 
 def draw_markers(image, markers):
@@ -171,12 +241,14 @@ def draw_notice(image, text):
     return result
 
 
-def add_status_bar(window, protocol_running, paused):
+def add_status_bar(window, protocol_running, paused, light=None):
     """Puts a dark bar with buttons above the window; it shows whether the protocol runs and whether there is a pause.
 
     The protocol button is red while a protocol runs, the pause button amber during
     a pause, and a pause also gets an amber frame around the whole window. Next to the
     buttons a dot and one line say in words what the program is doing right now.
+    light is (text, colour) of the light check, e.g. ("Light ok", GREEN); it is shown on the right,
+    because the light can change after the setup mode, e.g. when the camera adjusts its exposure.
     """
     result = window.copy()
     if paused:
@@ -196,15 +268,34 @@ def add_status_bar(window, protocol_running, paused):
         rounded_box(bar, (left, 8, right, STATUS_HEIGHT_PX - 8), color, (STATUS_HEIGHT_PX - 16) // 2)
         (width, _), _ = cv2.getTextSize(text, FONT, 0.55, 1)
         put_text(bar, text, ((left + right - width) // 2, text_y), 0.55, STATUS_TEXT_COLOR, 2 if color != STATUS_OFF_COLOR else 1)
-    state, state_color = ("PAUSED  nothing is detected or recorded", STATUS_PAUSE_COLOR) if paused else ("LIVE  detecting objects", STATUS_LIVE_COLOR)
+    state, state_color = ("PAUSED", STATUS_PAUSE_COLOR) if paused else ("LIVE", STATUS_LIVE_COLOR)
     if protocol_running and not paused:
-        state += ", protocol is recording"
+        state += ", REC"
     state_x = BUTTONS[-1][2] + 22
     cv2.circle(bar, (state_x, STATUS_HEIGHT_PX // 2), 6, state_color, -1, cv2.LINE_AA)
     put_text(bar, state, (state_x + 16, text_y), 0.55, WHITE, 1)
+    (state_width, _), _ = cv2.getTextSize(state, FONT, 0.55, 1)
+    right = bar.shape[1] - 14
     (help_width, _), _ = cv2.getTextSize(KEY_HELP, FONT, 0.5, 1)
-    put_text(bar, KEY_HELP, (bar.shape[1] - help_width - 14, text_y), 0.5, MUTED_COLOR, 1)
+    put_text(bar, KEY_HELP, (right - help_width, text_y), 0.5, MUTED_COLOR, 1)
+    if light is not None:
+        # The light sits between the state and the key help, shortened if the window is narrow.
+        text, color = light
+        space = right - help_width - 24 - (state_x + 16 + state_width + 24)
+        text = shorten(text, space - 32, 0.5)
+        (width, _), _ = cv2.getTextSize(text, FONT, 0.5, 1)
+        left = right - help_width - 24 - width - 32
+        rounded_box(bar, (left, 10, left + width + 32, STATUS_HEIGHT_PX - 10), CARD_COLOR, (STATUS_HEIGHT_PX - 20) // 2)
+        cv2.circle(bar, (left + 14, STATUS_HEIGHT_PX // 2), 5, color, -1, cv2.LINE_AA)
+        put_text(bar, text, (left + 26, text_y - 1), 0.5, WHITE, 1)
     return np.vstack([bar, result])
+
+
+def shorten(text, max_width, size):
+    """Cuts a text at the end with ".." until it is at most max_width pixels wide."""
+    while text and cv2.getTextSize(text, FONT, size, 1)[0][0] > max_width:
+        text = text[:-3] + ".." if len(text) > 3 else ""
+    return text
 
 
 def button_at(x, y):

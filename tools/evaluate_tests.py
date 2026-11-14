@@ -22,12 +22,8 @@ import cv2  # noqa: E402
 
 from objekterkennung.capture.setup_check import check_light  # noqa: E402
 from objekterkennung.config import load_settings  # noqa: E402
+from objekterkennung.output.models import EXPECTED_OBJECTS as EXPECTED  # noqa: E402
 
-# The 12 blocks that lie in the field in every test layout.
-EXPECTED = Counter({
-    ("red", "cube"): 2, ("blue", "cube"): 2, ("yellow", "cuboid"): 2, ("green", "cuboid"): 1,
-    ("blue", "prism"): 2, ("red", "prism"): 1, ("red", "sphere"): 1, ("green", "sphere"): 1,
-})
 LIGHT = load_settings().light
 # A pause of the program shows up as a jump of more than this many seconds.
 PAUSE_GAP_S = 2.0
