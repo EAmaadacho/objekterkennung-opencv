@@ -12,6 +12,8 @@ WHITE = (235, 225, 220)
 # Measured on the real field: skin has a warm hue but much less saturation than the red blocks.
 SKIN = (150, 175, 215)
 RED = (40, 30, 210)
+# Paper with a pink tint: hue about 173, saturation 30.
+PINK_PAPER = (138, 132, 150)
 
 
 def test_A4_hand_reaching_in_from_the_edge_is_noticed():
@@ -40,6 +42,19 @@ def test_A4_empty_field_has_no_hand():
     found = hand_in_field(_empty_field(), settings)
 
     assert not found
+
+
+def test_A4_table_strip_next_to_pink_tinted_paper_is_no_hand():
+    # Many red blocks make the camera tint the paper slightly pink (saturation about 30).
+    # Next to a dark strip of table at the edge the two together are as wide as a hand.
+    settings = load_settings()
+    field = _empty_field()
+    field[:, 0:14] = (40, 40, 40)
+    field[300:600, 14:60] = PINK_PAPER
+
+    hand = hand_in_field(field, settings)
+
+    assert not hand
 
 
 def _empty_field():
