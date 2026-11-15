@@ -7,6 +7,7 @@ from objekterkennung.config import load_settings
 from objekterkennung.detection.segmentation import (
     clean_mask,
     color_mask,
+    _join_halves,
     _watershed,
     split_touching,
 )
@@ -224,6 +225,36 @@ def test_A5_prism_next_to_the_ball_is_not_filled_up_to_a_square():
     objects = split_touching(mask, load_settings())
 
     assert sorted(classify_shape(piece) for piece in objects) == ["prism", "sphere"]
+
+
+def test_A5_cuboid_cut_in_two_by_the_ball_is_joined_again():
+    # Test 15.11.: the green sphere lies on the middle of the green cuboid and its shadow cuts
+    # the visible rest into two pieces that each look like a cube.
+    ball = np.zeros((FIELD_PX, FIELD_PX), np.uint8)
+    cv2.circle(ball, (300, 280), 75, 255, -1)
+    cuboid = np.zeros_like(ball)
+    cv2.rectangle(cuboid, (180, 300), (420, 400), 255, -1)
+    left, right = cuboid.copy(), cuboid.copy()
+    left[:, 300:] = 0
+    right[:, :305] = 0
+
+    pieces = _join_halves([left & ~ball, right & ~ball], ball)
+
+    assert len(pieces) == 1
+    assert np.count_nonzero(pieces[0]) == np.count_nonzero(left & ~ball) + np.count_nonzero(right & ~ball)
+
+
+def test_A5_two_cubes_beside_the_ball_stay_apart():
+    ball = np.zeros((FIELD_PX, FIELD_PX), np.uint8)
+    cv2.circle(ball, (300, 200), 75, 255, -1)
+    first = np.zeros_like(ball)
+    second = np.zeros_like(ball)
+    cv2.rectangle(first, (200, 270), (300, 370), 255, -1)
+    cv2.rectangle(second, (305, 270), (405, 370), 255, -1)
+
+    pieces = _join_halves([first & ~ball, second & ~ball], ball)
+
+    assert len(pieces) == 2
 
 
 def test_A2_red_sphere_counts_as_red_and_yellow_cuboid_as_yellow():

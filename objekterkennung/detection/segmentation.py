@@ -46,6 +46,11 @@ HIDDEN_KERNEL = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * CUT_MARGIN_PX 
 # the hidden strips of the green cuboid were up to 26 px (8 mm) wide; wider gaps under a ball
 # were the open half of a prism's rectangle.
 HIDDEN_STRIP_MAX_PX = 30
+# Two pieces next to a ball are one cuboid if the ball covers at least 18 % of the rectangle
+# around them and they fill 90 % of the rest. In the recordings the ball covered 21-25 % of a
+# green cuboid cut in two, but only up to 15 % of two red cubes lying beside the red sphere.
+JOIN_COVER_MIN = 0.18
+JOIN_FILL_MIN = 0.9
 # What the background takes inside an area counts as a block only if it is at least this wide.
 # A visible side face is a thin strip; the smallest block, a prism, is about 70 px wide.
 # In the recordings 55 px kept every side face out (40 px let 9 more through).
@@ -92,7 +97,8 @@ def split_touching(mask, settings, field_image=None):
     Every connected area goes through these steps:
     1. Areas smaller than min_object_area_px (config.json, "detection") are noise and dropped.
     2. A ball is cut out first, because it can melt together with a block of the same
-       colour, e.g. the green sphere and the green cuboid. The rest starts again at step 1.
+       colour, e.g. the green sphere and the green cuboid. The rest starts again at step 1;
+   two pieces of it that form one cuboid partly under the ball are joined again.
     3. The visible edges of the field image cut the area into top faces ("seeds"): two cubes
        lying flush show a dark line between them. Large areas are also searched with finer
        edges, because that seam can be very faint.
@@ -114,7 +120,8 @@ def split_touching(mask, settings, field_image=None):
             # The rest may still hold several blocks, so it goes through the same steps.
             # Each block then gets back what the ball hides of it.
             hidden = cv2.dilate(ball, HIDDEN_KERNEL)
-            for piece in split_touching(clean_mask(rest), settings, field_image):
+            pieces = _join_halves(split_touching(clean_mask(rest), settings, field_image), hidden)
+            for piece in pieces:
                 objects.append(_add_hidden_part(piece, hidden))
             continue
         seeds = None if edges is None else _edge_seeds(part, edges, field_image)
@@ -130,6 +137,41 @@ def split_touching(mask, settings, field_image=None):
         else:
             objects.extend(_split_one_part(part, min_area_px))
     return objects
+
+
+def _join_halves(pieces, hidden):
+    """Joins two pieces next to the ball that are really one cuboid partly under it.
+
+    If the ball lies on a cuboid or throws its shadow across it, the edge search can cut
+    the cuboid into two pieces that each look like a cube (test 15.11.). Two pieces are
+    joined if both touch the ball, together they are long like a cuboid, the ball covers at
+    least JOIN_COVER_MIN of the rectangle around them (cv2.minAreaRect), and they fill at
+    least JOIN_FILL_MIN of the part of that rectangle the ball leaves visible.
+    """
+    pieces = list(pieces)
+    for first in range(len(pieces)):
+        for second in range(first + 1, len(pieces)):
+            joined = pieces[first] | pieces[second]
+            if _is_cuboid_under_ball(pieces[first], pieces[second], joined, hidden):
+                rest = [piece for index, piece in enumerate(pieces) if index not in (first, second)]
+                return _join_halves(rest + [joined], hidden)
+    return pieces
+
+
+def _is_cuboid_under_ball(first, second, joined, hidden):
+    """The checks of _join_halves for one pair of pieces."""
+    if not all(np.any(cv2.dilate(piece, HIDDEN_KERNEL) & hidden) for piece in (first, second)):
+        return False
+    rectangle_box = cv2.minAreaRect(outline_points(joined))
+    (_, _), (width, height), _ = rectangle_box
+    if max(width, height) < CUBOID_ASPECT_MIN * min(width, height):
+        return False
+    rectangle = np.zeros_like(joined)
+    cv2.fillPoly(rectangle, [np.round(cv2.boxPoints(rectangle_box)).astype(np.int32)], 255)
+    if np.count_nonzero(rectangle & hidden) < JOIN_COVER_MIN * np.count_nonzero(rectangle):
+        return False
+    visible = rectangle & ~hidden
+    return np.count_nonzero(joined & visible) >= JOIN_FILL_MIN * np.count_nonzero(visible)
 
 
 def _add_hidden_part(piece, hidden):
