@@ -73,8 +73,10 @@ OFFSET_MAX = 0.15
 # Light, measured on the white paper (low saturation) in the straight field. The target band
 # for a green light comes from config.json (section "light"): in the light-level test (13.11.)
 # the paper went from 173 at the strongest to 145 at the weakest lamp level, about 3 grey levels
-# per step, and the colour ranges were set at 160-165. A single level cannot be told apart,
-# because the camera adjusts its exposure. Below BRIGHTNESS_MIN the light is clearly too weak.
+# per step. In the test of 15.11. a pale red cube was lost at 172-176 and the green cuboid in
+# the shadow of the ball at 137-139; 155-162 (darkest lamp level) worked best. A single level
+# cannot be told apart, because the camera adjusts its exposure. Below BRIGHTNESS_MIN the light
+# is clearly too weak.
 PAPER_SATURATION_MAX = 40
 BRIGHTNESS_MIN = 90
 BRIGHTNESS_TOO_HIGH = 235

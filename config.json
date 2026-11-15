@@ -19,7 +19,7 @@
       "blue": [[100, 130]]
     },
     "min_saturation": {
-      "red": 100,
+      "red": 80,
       "yellow": 80,
       "green": 60,
       "blue": 60
@@ -27,7 +27,7 @@
     "min_brightness": {
       "red": 60,
       "yellow": 60,
-      "green": 45,
+      "green": 40,
       "blue": 60
     }
   },
@@ -36,8 +36,8 @@
     "prism_pair_colors": ["blue"]
   },
   "light": {
-    "paper_brightness_min": 155,
-    "paper_brightness_max": 170
+    "paper_brightness_min": 150,
+    "paper_brightness_max": 165
   },
   "detection": {
     "min_object_area_px": 3000

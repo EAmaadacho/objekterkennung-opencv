@@ -68,7 +68,7 @@ Jede Datei beginnt mit einem kurzen Text, der sagt, welche Anforderung sie umset
 So wurde das Programm getestet, und so lässt sich der Aufbau wiederholen:
 
 - Webcam EMEET C960 am Kamera-Arm, etwa 45–50 cm über der Blattmitte, Objektiv parallel zum Blatt.
-- Klemmleuchte auf Stufe 4, seitlich oberhalb; das Papier hat dann im Einrichtungsmodus Helligkeit 155–170 (Licht-Ampel grün).
+- Klemmleuchte auf der dunkelsten Stufe, seitlich oberhalb, Raum abgedunkelt; das Papier hat dann im Einrichtungsmodus Helligkeit 150–165 (Licht-Ampel grün).
 - Alle sechs Ampeln im Einrichtungsmodus grün, dann mit Enter starten.
 - Bei anderem Licht oder anderer Kamera einmal `main.py --calibrate` ausführen und die Farbbereiche neu einstellen.
 
@@ -100,7 +100,7 @@ Nach dem Start kommt zuerst der **Einrichtungsmodus**. Er prüft live sechs Punk
 - **Size:** Füllt das Feld genug vom Bild (Ziel: mindestens 35 % der Bildhöhe)?
 - **Straight:** Schaut die Kamera gerade von oben? Dann sind gegenüberliegende Feldseiten gleich lang und das Feld ist nicht verdreht.
 - **Centre:** Liegt das Feld in der Bildmitte?
-- **Light:** Liegt das Papier im Zielbereich 155–170 (Helligkeit 0–255; in diesem Licht wurden die Farbbereiche eingestellt), ist es gleichmäßig ausgeleuchtet und ohne überbelichtete Stellen?
+- **Light:** Liegt das Papier im Zielbereich 150–165 (Helligkeit 0–255; in diesem Licht wurden die Farbbereiche eingestellt), ist es gleichmäßig ausgeleuchtet und ohne überbelichtete Stellen?
 - **Blocks:** Zum Einrichten liegt ein Prüfmuster aus 16 Quadern im Feld, je 4 pro Farbe, in Reihen zu dritt über das ganze Feld verteilt. Werden alle als Quader in der richtigen Farbe erkannt? Fehlt einer, steht er dabei, z. B. „missing: red cuboid“. So lässt sich die Lampe direkt an echten Teilen einstellen: Ein Quader in einer Spiegelung wird blass und fehlt.
 
 Zu jeder gelben oder roten Ampel steht, was zu tun ist, z. B. „move camera lower“. Beim Ausrichten helfen ein helles Fadenkreuz durch die Bildmitte und ein Zielrahmen. Durch die Mitte des erkannten Felds läuft ein zweites Kreuz in der Farbe des Feldrahmens; liegt es auf dem hellen Fadenkreuz, hängt die Kamera genau über der Feldmitte. Eine Wasserwaage in der Bildmitte zeigt die Neigung der Kamera. Ist sie zu schräg, zeigt ein Pfeil vom Punkt zur Mitte, wohin die Linse gekippt werden muss. Liegt das Feld nicht in der Mitte, zeigt ein zweiter Pfeil, wohin die Kamera verschoben werden muss.
@@ -117,7 +117,7 @@ Was „grün“ bedeutet, ist an den Testaufnahmen vom 12. und 13.11. geprüft:
 | Size | Feld ≥ 35 % der Bildhöhe | Der Testaufbau erreichte 36–38 %; damit wurden bei grünem Licht 97 % der Teile richtig erkannt. |
 | Straight | Neigung ≤ 5 %, Drehung ≤ 2° | Am 13.11. immer erfüllt (etwa 1 %); 5 % verschieben die Oberseite eines Würfels nur um etwa 4 mm. |
 | Centre | Feldmitte ≤ 5 % neben der Bildmitte | Am 12.11. lag das Feld zu weit unten, ein blaues Prisma am Rand erschien abgeschnitten. |
-| Light | Papier 155–170, Gleichmäßigkeit ≥ 65 % | Gleiche Lage, gleiche Software: bei Papier 171 wurden 0 von 16 roten Würfeln erkannt, eine Lampenstufe dunkler (155–161) 18 von 18. Über alle Bilder vom 13.11.: bei grünem Licht 97 % der Teile richtig, sonst 90 %. Im Live-Test vom 14.11. lag das Papier bei 172–182; rote Würfel in der Spiegelung oben rechts hatten nur die halbe Sättigung und fehlten. |
+| Light | Papier 150–165, Gleichmäßigkeit ≥ 65 % | Gleiche Lage, gleiche Software: bei Papier 171 wurden 0 von 16 roten Würfeln erkannt, eine Lampenstufe dunkler (155–161) 18 von 18. Im Live-Test vom 14.11. lag das Papier bei 172–182; rote Würfel in der Spiegelung oben rechts hatten nur die halbe Sättigung und fehlten. Im Test vom 15.11. fehlte bei Papier 172–176 ein blasser roter Würfel, bei 137–139 der grüne Quader im Schatten der Kugel; bei 155–162 (dunkelste Lampenstufe) lief es am besten. |
 | Blocks | alle 16 Quader des Prüfmusters erkannt | Zählt über die letzten 10 Bilder, wie die Erkennung selbst. Weil die Quader das ganze Feld bedecken, fällt eine zu helle oder zu dunkle Stelle auf, die das Papier allein nicht zeigt. |
 
 Mit `main.py --calibrate` startet der Kalibriermodus: Mit Schiebereglern werden die Farbbereiche an das Licht angepasst und in `config.json` gespeichert.
@@ -138,14 +138,25 @@ Die Namen im Code sind dieselben wie hier: `settings.colors.min_saturation` ist 
 | `board.marker_distance_to_field_mm` | Abstand der Marker von der Feldlinie. | mm, 8 | Nur bei einem anders gedruckten Spielfeld. |
 | `board.field_size_in_image_px` | Wie groß das Feld im geraden Bild ist. Mehr Pixel zeigen feinere Kanten, kosten aber Rechenzeit. | Pixel, 600 (≈ 3,3 Pixel pro mm) | Selten; dann auch `detection.min_object_area_px` anpassen. |
 | `colors.hue_ranges` | Farbtonbereich pro Farbe. Rot liegt an beiden Enden der Skala und hat deshalb zwei Bereiche. | 0–180 (OpenCV), z. B. blau 100–130 | Wenn eine Farbe mit einer anderen verwechselt wird; am besten im Kalibriermodus. |
-| `colors.min_saturation` | Mindest-Sättigung pro Farbe: wie kräftig eine Farbe sein muss, um zu zählen. Weißes Papier und graue Schatten liegen darunter. | 0–255, z. B. rot 100 | Höher, wenn Schatten oder Haut als Farbe erkannt werden; niedriger, wenn Steine bei starkem Licht blass werden und fehlen. |
-| `colors.min_brightness` | Mindest-Helligkeit pro Farbe: dunklere Pixel zählen nicht zu dieser Farbe. Grün liegt niedriger, weil der dunkelgrüne Quader nur Helligkeit 27–54 hat. | 0–255, z. B. grün 45, sonst 60 | Niedriger, wenn dunkle Steine oder ihre Seitenflächen fehlen. |
+| `colors.min_saturation` | Mindest-Sättigung pro Farbe: wie kräftig eine Farbe sein muss, um zu zählen. Weißes Papier und graue Schatten liegen darunter. | 0–255, z. B. rot 80 | Höher, wenn Schatten oder Haut als Farbe erkannt werden; niedriger, wenn Steine bei starkem Licht blass werden und fehlen. |
+| `colors.min_brightness` | Mindest-Helligkeit pro Farbe: dunklere Pixel zählen nicht zu dieser Farbe. Grün liegt niedriger, weil der dunkelgrüne Quader nur Helligkeit 27–54 hat. | 0–255, z. B. grün 40, sonst 60 | Niedriger, wenn dunkle Steine oder ihre Seitenflächen fehlen. |
 | `objects.sphere_diameter_mm` | Durchmesser der Kugeln. Daraus folgt der Radius, nach dem `HoughCircles` sucht. | mm, 46 | Bei anderen Kugeln. |
 | `objects.prism_pair_colors` | Farben, von denen zwei Prismen im Feld liegen. Nur bei ihnen wird geprüft, ob ein Quadrat eigentlich zwei Prismen ist. | Liste, `["blue"]` | Wenn sich die Objektmenge ändert. |
-| `light.paper_brightness_min`, `light.paper_brightness_max` | Zielbereich für die Helligkeit des weißen Papiers im Einrichtungsmodus. In diesem Licht (Lampe Stufe 4) wurden die Farbbereiche eingestellt. | 0–255, 155–170 | Nach einer neuen Kalibrierung bei anderem Licht. |
+| `light.paper_brightness_min`, `light.paper_brightness_max` | Zielbereich für die Helligkeit des weißen Papiers im Einrichtungsmodus. In diesem Licht (dunkelste Lampenstufe) wurden die Farbbereiche eingestellt. | 0–255, 150–165 | Nach einer neuen Kalibrierung bei anderem Licht. |
 | `detection.min_object_area_px` | Kleinste Fläche, die als Objekt zählt; alles Kleinere ist Rauschen. | Pixel im geraden Bild, 3000 (≈ 16 × 16 mm) | Höher, wenn kleine Flecken als Objekt erscheinen. |
 | `changes.frames_until_reported` | Wie viele Bilder hintereinander eine Änderung gleich bleiben muss, bevor sie gemeldet wird. Über genauso viele Bilder wird auch die angezeigte Position geglättet (Median). | Bilder, 10 (≈ 1–1,5 s) | Höher, wenn Meldungen flackern; niedriger, wenn sie zu spät kommen. |
 | `changes.min_move_share_of_field` | Ab welcher Strecke ein Objekt als verschoben gemeldet wird. | Anteil der Feldbreite, 0.02 (≈ 3,6 mm) | Höher, wenn ruhig liegende Steine als verschoben gemeldet werden. |
+
+**Farbsicherheit (Test vom 15.11.):** Für jede Farbe wurde gemessen, wie weit die blassesten und dunkelsten Stellen der Steine (das untere Fünftel ihrer Pixel) über den Grenzen liegen.
+
+| Farbe | Sättigung: gemessen / Grenze | Helligkeit: gemessen / Grenze | Reserve |
+|---|---|---|---|
+| Rot | ab 98 (blasse Oberseite bei zu hellem Licht), sonst ab 120 / 80 | ab 88 / 60 | knapp bei der Sättigung; deshalb wurde die Grenze von 100 auf 80 gesenkt |
+| Gelb | ab 109 / 80 | ab 123 / 60 | groß |
+| Grün | ab 75 / 60 | ab 42 (Quader im Schatten der Kugel) / 40 | knapp bei der Helligkeit; deshalb wurde die Grenze von 45 auf 40 gesenkt |
+| Blau | ab 87 / 60 | ab 67 / 60 | ausreichend |
+
+Über alle gespeicherten Testbilder (286 Bilder aus sechs Testläufen) stieg die Zahl der Bilder, in denen alle 12 Teile richtig erkannt wurden, durch die beiden neuen Grenzen von 103 auf 115. Noch tiefere Grenzen (Rot 70) brachten in denselben Bildern keine weitere Verbesserung, nur mehr Fehlteile.
 
 **Genauigkeit der Position:** Die Kamera sieht hohe Steine am Feldrand leicht von der Seite, ihre Oberseite erscheint dadurch etwas weiter außen. In den Ecken weicht die Position deshalb um bis zu etwa 0,02–0,035 ab, in der Mitte praktisch nicht. Das Programm korrigiert das nicht, weil die Höhe eines Steins aus einem Bild von oben nicht bekannt ist.
 
