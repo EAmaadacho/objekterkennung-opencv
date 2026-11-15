@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 
 from objekterkennung.config import load_settings
-from objekterkennung.detection.detector import detect_objects
+from objekterkennung.detection.detector import _about_square, detect_objects
 
 # The straight image is the 600 px field plus a 50 px margin on every side.
 FIELD_PX = 700
@@ -54,6 +54,19 @@ def test_A5_touching_objects_of_different_colours_are_separate():
     objects = detect_objects(field, settings)
 
     assert sorted(item.color for item in objects) == ["blue", "red"]
+
+
+def test_A1_square_with_side_strip_is_still_checked_for_two_prisms():
+    # Test 15.11.: two prisms as a square plus the side face of the cube next to them
+    # measured 1.51 : 1 and counted as a cuboid, so the joint was never looked for.
+    square_with_strip = np.zeros((FIELD_PX, FIELD_PX), np.uint8)
+    cv2.rectangle(square_with_strip, (100, 100), (220, 220), 255, -1)
+    cv2.rectangle(square_with_strip, (100, 220), (220, 280), 255, -1)
+    cuboid = np.zeros((FIELD_PX, FIELD_PX), np.uint8)
+    cv2.rectangle(cuboid, (100, 100), (340, 200), 255, -1)
+
+    assert _about_square(square_with_strip)
+    assert not _about_square(cuboid)
 
 
 def _square(field, center, size, color):

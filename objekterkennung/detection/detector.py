@@ -4,11 +4,18 @@ This is where the detection starts. It calls segmentation.py (colour masks, touc
 objects), prism_pair.py (two prisms that form a square) and shapes.py (the shape).
 """
 
+import cv2
+
 from objekterkennung.capture.board import pixel_to_unit
 from objekterkennung.detection.prism_pair import split_prism_pair
-from objekterkennung.detection.segmentation import color_mask, split_touching
+from objekterkennung.detection.segmentation import color_mask, outline_points, split_touching
 from objekterkennung.detection.shapes import center_px, classify_shape
 from objekterkennung.output.models import DetectedObject
+
+# Two prisms as a square can carry a thin side face of the block next to them and then measure
+# just over the cube limit, e.g. 1.51 : 1 (test 15.11.). Up to this ratio a "cuboid" is still
+# checked for a joint; a real cuboid is 2.4 : 1.
+PAIR_ASPECT_MAX = 1.7
 
 
 def detect_objects(field_image, settings):
@@ -33,13 +40,24 @@ def detect_objects(field_image, settings):
 
 
 def _split_all(mask, color, field_image, settings):
-    """All object masks of one colour; a "cube" is checked once more for being two prisms.
+    """All object masks of one colour; a square is checked once more for being two prisms.
 
     Only colours with two prisms (config.json, "objects": "prism_pair_colors") can form
     such a square; for all others a dark line across a cube is never a joint.
     """
     for object_mask in split_touching(mask, settings, field_image):
-        if color in settings.objects.prism_pair_colors and classify_shape(object_mask) == "cube":
+        if color in settings.objects.prism_pair_colors and _about_square(object_mask):
             yield from split_prism_pair(object_mask, field_image)
         else:
             yield object_mask
+
+
+def _about_square(object_mask):
+    """True for a "cube" and for a "cuboid" that is shorter than PAIR_ASPECT_MAX : 1."""
+    shape = classify_shape(object_mask)
+    if shape == "cube":
+        return True
+    if shape != "cuboid":
+        return False
+    (_, _), (width, height), _ = cv2.minAreaRect(outline_points(object_mask))
+    return max(width, height) < PAIR_ASPECT_MAX * min(width, height)
