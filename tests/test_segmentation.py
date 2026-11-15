@@ -94,6 +94,27 @@ def test_A5_two_touching_cubes_are_split():
     assert len(objects) == 2
 
 
+def test_A5_row_of_three_grainy_cubes_is_split():
+    # Test 15.11.: three flush blue blocks in a row; wood grain covered the middle and the
+    # right one with short lines, so only the left cube gave a seed.
+    settings = load_settings()
+    field = _empty_field()
+    for left in (100, 207, 314):
+        cv2.rectangle(field, (left, 200), (left + 105, 305), BLUE, -1)
+    for seam in (206, 313):
+        cv2.line(field, (seam, 200), (seam, 305), SEAM, 2)
+    grain = np.random.default_rng(1)
+    for _ in range(200):
+        x = int(grain.integers(212, 414))
+        y = int(grain.integers(205, 300))
+        cv2.line(field, (x, y), (x + 10, y + int(grain.integers(-2, 3))), SEAM, 1)
+    mask = color_mask(field, "blue", settings)
+
+    objects = split_touching(mask, settings, field)
+
+    assert len(objects) == 3
+
+
 def test_A5_cuboid_stays_one_object():
     mask = np.zeros((FIELD_PX, FIELD_PX), dtype=np.uint8)
     cv2.rectangle(mask, (100, 100), (266, 183), 255, -1)

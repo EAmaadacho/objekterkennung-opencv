@@ -51,6 +51,15 @@ HIDDEN_STRIP_MAX_PX = 30
 # green cuboid cut in two, but only up to 15 % of two red cubes lying beside the red sphere.
 JOIN_COVER_MIN = 0.18
 JOIN_FILL_MIN = 0.9
+# Wood grain on some blocks gives Canny many short lines, so a top face shows no smooth
+# part to start from. In a row of three flush blocks of one colour (test 15.11., two blue
+# cubes and the blue prism) only the left cube kept a seed, and the whole row became one
+# "cuboid". For an area longer than any single block (a cuboid is 58 mm = 193 px) the edges
+# are searched once more without lines shorter than GRAIN_EDGE_MIN_PX; seams and outlines
+# run across a whole block and stay. In all recordings this split 4 such rows and changed
+# nothing else (20 px split only one, 50 px the same 4).
+ROW_LENGTH_MIN_PX = 230
+GRAIN_EDGE_MIN_PX = 35
 # What the background takes inside an area counts as a block only if it is at least this wide.
 # A visible side face is a thin strip; the smallest block, a prism, is about 70 px wide.
 # In the recordings 55 px kept every side face out (40 px let 9 more through).
@@ -98,10 +107,11 @@ def split_touching(mask, settings, field_image=None):
     1. Areas smaller than min_object_area_px (config.json, "detection") are noise and dropped.
     2. A ball is cut out first, because it can melt together with a block of the same
        colour, e.g. the green sphere and the green cuboid. The rest starts again at step 1;
-   two pieces of it that form one cuboid partly under the ball are joined again.
+       Two pieces of it that form one cuboid partly under the ball are joined again.
     3. The visible edges of the field image cut the area into top faces ("seeds"): two cubes
        lying flush show a dark line between them. Large areas are also searched with finer
-       edges, because that seam can be very faint.
+       edges, because that seam can be very faint. An area longer than one block is
+       searched once more without short lines, because wood grain can hide every top face.
     4. With two or more seeds, watershed draws the border between them. Otherwise the
        distance transform looks for one "hill" per object and watershed splits there.
     """
@@ -132,6 +142,11 @@ def split_touching(mask, settings, field_image=None):
             # The finer search is only trusted if it finds more top faces.
             if fine_count > count:
                 seeds, count = fine_seeds, fine_count
+        if count < 2 and field_image is not None and _longest_side(part) > ROW_LENGTH_MIN_PX:
+            grain_free = _edges(field_image, EDGE_LOW, EDGE_HIGH, GRAIN_EDGE_MIN_PX)
+            grain_free_seeds = _edge_seeds(part, grain_free, field_image)
+            if len(areas(grain_free_seeds)) >= 2:
+                seeds, count = grain_free_seeds, len(areas(grain_free_seeds))
         if count >= 2:
             objects.extend(_watershed(part, seeds, field_image, min_area_px))
         else:
@@ -201,17 +216,30 @@ def _add_hidden_part(piece, hidden):
     return piece | added
 
 
-def _edges(field_image, low, high):
+def _edges(field_image, low, high, min_length_px=0):
     """Canny edges of the field with the thresholds low and high, made 3 px wide so that a thin border line closes.
 
     Every colour channel is searched on its own, because two neighbouring areas can be
     equally bright in the grey image and differ only in one channel (script ch. 4.1, 4.2).
+    With min_length_px, connected lines that are shorter in x and y are left out (wood grain).
     """
     blurred = cv2.GaussianBlur(field_image, (5, 5), 0)
     edges = np.zeros(field_image.shape[:2], dtype=np.uint8)
     for channel in cv2.split(blurred):
         edges = edges | cv2.Canny(channel, low, high)
+    if min_length_px:
+        count, labels, stats, _ = cv2.connectedComponentsWithStats(edges)
+        length = np.maximum(stats[:, cv2.CC_STAT_WIDTH], stats[:, cv2.CC_STAT_HEIGHT])
+        long_enough = length >= min_length_px
+        long_enough[0] = False  # label 0 is the background
+        edges = np.where(long_enough[labels], 255, 0).astype(np.uint8)
     return cv2.dilate(edges, np.ones((3, 3), np.uint8))
+
+
+def _longest_side(part):
+    """Length of the longer side of the smallest rectangle around the area (cv2.minAreaRect)."""
+    (_, _), (width, height), _ = cv2.minAreaRect(outline_points(part))
+    return max(width, height)
 
 
 def _edge_seeds(part, edges, field_image):
