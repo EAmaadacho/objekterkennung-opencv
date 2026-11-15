@@ -228,7 +228,7 @@ def _edges(field_image, low, high, min_length_px=0):
     for channel in cv2.split(blurred):
         edges = edges | cv2.Canny(channel, low, high)
     if min_length_px:
-        count, labels, stats, _ = cv2.connectedComponentsWithStats(edges)
+        _, labels, stats, _ = cv2.connectedComponentsWithStats(edges)
         length = np.maximum(stats[:, cv2.CC_STAT_WIDTH], stats[:, cv2.CC_STAT_HEIGHT])
         long_enough = length >= min_length_px
         long_enough[0] = False  # label 0 is the background

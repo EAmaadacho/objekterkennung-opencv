@@ -5,10 +5,10 @@ import numpy as np
 
 from objekterkennung.config import load_settings
 from objekterkennung.detection.segmentation import (
-    clean_mask,
-    color_mask,
     _join_halves,
     _watershed,
+    clean_mask,
+    color_mask,
     split_touching,
 )
 from objekterkennung.detection.shapes import classify_shape

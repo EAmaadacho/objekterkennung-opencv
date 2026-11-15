@@ -8,7 +8,11 @@ import cv2
 
 from objekterkennung.capture.board import pixel_to_unit
 from objekterkennung.detection.prism_pair import split_prism_pair
-from objekterkennung.detection.segmentation import color_mask, outline_points, split_touching
+from objekterkennung.detection.segmentation import (
+    color_mask,
+    outline_points,
+    split_touching,
+)
 from objekterkennung.detection.shapes import center_px, classify_shape
 from objekterkennung.output.models import DetectedObject
 
