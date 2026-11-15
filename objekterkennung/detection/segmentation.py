@@ -46,6 +46,10 @@ HIDDEN_KERNEL = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * CUT_MARGIN_PX 
 # the hidden strips of the green cuboid were up to 26 px (8 mm) wide; wider gaps under a ball
 # were the open half of a prism's rectangle.
 HIDDEN_STRIP_MAX_PX = 30
+# What the background takes inside an area counts as a block only if it is at least this wide.
+# A visible side face is a thin strip; the smallest block, a prism, is about 70 px wide.
+# In the recordings 55 px kept every side face out (40 px let 9 more through).
+LOST_MIN_WIDTH_PX = 55
 
 
 def color_mask(field_image, color, settings):
@@ -239,7 +243,12 @@ def _split_one_part(part, min_area_px):
 
 
 def _watershed(part, seeds, image, min_area_px):
-    """Grows every seed until it meets its neighbour; returns one mask per seed."""
+    """Grows every seed until it meets its neighbour; returns one mask per seed.
+
+    The background grows as well. A block whose top face gave no seed, e.g. a prism next
+    to two cubes, can then be taken by the background instead of a seed. What the background
+    took inside the area is therefore kept as an object of its own if it is large enough.
+    """
     # Marker 1 is the background, the seeds are 2, 3, ... and 0 means "still unknown".
     markers = np.ones(part.shape, dtype=np.int32)
     markers[part == 255] = 0
@@ -251,5 +260,9 @@ def _watershed(part, seeds, image, min_area_px):
     for marker in range(2, len(seed_masks) + 2):
         piece = np.where(markers == marker, 255, 0).astype(np.uint8)
         if np.count_nonzero(piece) >= min_area_px:
+            pieces.append(piece)
+    lost = np.where((markers == 1) & (part == 255), 255, 0).astype(np.uint8)
+    for piece in areas(clean_mask(lost)):
+        if np.count_nonzero(piece) >= min_area_px and 2 * cv2.distanceTransform(piece, cv2.DIST_L2, 5).max() >= LOST_MIN_WIDTH_PX:
             pieces.append(piece)
     return pieces

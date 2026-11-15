@@ -7,6 +7,7 @@ from objekterkennung.config import load_settings
 from objekterkennung.detection.segmentation import (
     clean_mask,
     color_mask,
+    _watershed,
     split_touching,
 )
 from objekterkennung.detection.shapes import classify_shape
@@ -178,6 +179,27 @@ def test_A5_tiny_specks_are_dropped():
     objects = split_touching(mask, load_settings())
 
     assert objects == []
+
+
+def test_A5_block_without_seed_is_not_lost():
+    # Two cubes gave a seed each, the prism next to them none (live test 14.11.).
+    part = np.zeros((300, 400), dtype=np.uint8)
+    cv2.rectangle(part, (20, 100), (120, 200), 255, -1)
+    cv2.rectangle(part, (121, 100), (221, 200), 255, -1)
+    cv2.fillPoly(part, [np.array([[222, 100], [380, 100], [222, 258]])], 255)
+    seeds = np.zeros_like(part)
+    cv2.rectangle(seeds, (40, 120), (100, 180), 255, -1)
+    cv2.rectangle(seeds, (141, 120), (201, 180), 255, -1)
+    # The prism is set off from the cubes by a dark seam, but only weakly from the shadow beside it.
+    image = np.full((300, 400, 3), (120, 70, 40), dtype=np.uint8)
+    image[part == 255] = (140, 60, 30)
+    cv2.line(image, (121, 100), (121, 200), (0, 0, 0), 5)
+    cv2.line(image, (222, 100), (222, 258), (0, 0, 0), 5)
+
+    pieces = _watershed(part, seeds, image, 3000)
+
+    assert len(pieces) == 3
+    assert classify_shape(pieces[2]) == "prism"
 
 
 def test_A5_cuboid_gets_back_the_strip_hidden_by_the_ball():
