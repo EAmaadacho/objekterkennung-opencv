@@ -1,12 +1,10 @@
 """Setup mode before the start: checks camera and light live and shows them as five traffic lights (A6, A7).
 
-The six checks: all four markers seen, field large enough, camera straight above the
-field, field in the middle of the image, paper bright and evenly lit, and all cuboids of a
-test pattern found (4 per colour). The last one lets the light be set on real blocks.
+The five checks: all four markers seen, field large enough, camera straight above the
+field, field in the middle of the image, and paper bright and evenly lit.
 The file has three parts: the checks, the drawing of the setup window, and the loop that runs it.
 """
 
-from collections import Counter
 from dataclasses import dataclass
 
 import cv2
@@ -22,7 +20,6 @@ from objekterkennung.capture.board import (
     upright_turns,
 )
 from objekterkennung.capture.camera import read_frame
-from objekterkennung.detection.detector import detect_objects
 from objekterkennung.output.display import (
     AMBER,
     CARD_COLOR,
@@ -39,9 +36,6 @@ from objekterkennung.output.display import (
     show,
     to_image,
 )
-from objekterkennung.config import COLOR_NAMES
-from objekterkennung.output.models import SHAPE_NAMES
-from objekterkennung.output.smoothing import FrameSmoother
 
 OK = "ok"
 WARN = "warn"
@@ -90,15 +84,6 @@ GLARE_VALUE = 250
 GLARE_GOOD = 0.01
 GLARE_MAX = 0.05
 GRID_PARTS = 3
-# Blocks: for the setup, 16 cuboids lie in the field as a test pattern, 4 of every colour,
-# in rows of three. Every colour shows up several times and across the whole field, so a
-# spot with glare or shadow makes a block there fade and go missing.
-SETUP_OBJECTS = Counter({(color, "cuboid"): 4 for color in COLOR_NAMES})
-# Green if all of them are found as cuboids, yellow if at most this many are missing or extra.
-BLOCKS_WARN_MAX = 2
-# The blocks are counted over the last frames, like in the detection, so one unclear frame
-# does not make the light jump.
-BLOCKS_FRAMES = 10
 # Radius of the spirit level around the image centre; its outer ring stands for TILT_MAX.
 LEVEL_RADIUS_PX = 70
 # Strength of the see-through layers (cv2.addWeighted, script ch. 4.1.7): field tint, guide lines, level.
@@ -111,8 +96,8 @@ PANEL_WIDTH = 440
 CARD_TOP = 84
 CARD_HEIGHT = 56
 CARD_GAP = 8
-START_BUTTON = (20, 488, 420, 532)  # left, top, right, bottom in the window
-GUIDES_BUTTON = (20, 600, 420, 640)
+START_BUTTON = (20, 424, 420, 468)  # left, top, right, bottom in the window
+GUIDES_BUTTON = (20, 536, 420, 576)
 START_KEYS = (13, 10)  # Enter on Windows and Linux
 QUIT_KEY = "q"
 # Hides all guides on the camera image, so the blocks can be seen as they look in the light.
@@ -132,18 +117,14 @@ class Check:
 # Part 1: the five checks, each on one camera image.
 
 
-def check_setup(frame, settings, smoother=None):
-    """Runs all six checks on one camera image; returns the checks and the field corners in the image (or None).
-
-    smoother is a FrameSmoother that counts the blocks over the last frames; without it
-    only this one image is counted.
-    """
+def check_setup(frame, settings):
+    """Runs all five checks on one camera image; returns the checks and the field corners in the image (or None)."""
     markers = find_markers(frame)
     found = [marker_id for marker_id in MARKER_IDS if marker_id in markers]
     if len(found) < len(MARKER_IDS):
         missing = ", ".join(str(marker_id) for marker_id in MARKER_IDS if marker_id not in found)
         checks = [Check("Markers", BAD, f"{len(found)} of 4 found - missing: {missing}")]
-        checks += [Check(name, BAD, "needs all 4 markers") for name in ("Size", "Straight", "Centre", "Light", "Blocks")]
+        checks += [Check(name, BAD, "needs all 4 markers") for name in ("Size", "Straight", "Centre", "Light")]
         return checks, None
     board = settings.board
     homography = find_homography(frame, board)
@@ -156,10 +137,6 @@ def check_setup(frame, settings, smoother=None):
     ]
     field_image = straighten_field(frame, homography, board)
     checks.append(check_light(field_image, settings.light))
-    objects = detect_objects(field_image, settings)
-    if smoother is not None:
-        objects = smoother.update(objects)
-    checks.append(check_blocks(objects))
     return checks, corners
 
 
@@ -300,31 +277,8 @@ def check_light(field_image, light):
 # Part 2: drawing the setup window.
 
 
-def check_blocks(objects):
-    """Are all cuboids of the test pattern found? E.g. "15 of 16 found - missing: red cuboid".
-
-    The cuboids lie in the field during the setup, so the lamp can be moved until all of them
-    are found. A block that is missing usually lies in a spot that is too bright or too dark;
-    one found with the wrong shape is named as extra, e.g. "extra: 2x green cube".
-    """
-    found = Counter((item.color, item.shape) for item in objects)
-    missing = SETUP_OBJECTS - found
-    extra = found - SETUP_OBJECTS
-    total = sum(SETUP_OBJECTS.values())
-    text = f"{sum((found & SETUP_OBJECTS).values())} of {total} found"
-    if not missing and not extra:
-        return Check("Blocks", OK, text)
-    level = WARN if sum(missing.values()) + sum(extra.values()) <= BLOCKS_WARN_MAX else BAD
-    if missing:
-        hint = f"missing: {_block_names(missing)}"
-        if extra:
-            hint += f", extra: {_block_names(extra)}"
-        return Check("Blocks", level, f"{text} - {hint}")
-    return Check("Blocks", level, f"{text} - extra: {_block_names(extra)}")
-
-
 def draw_setup(frame, checks, corners, guides_shown=True):
-    """A panel with the six traffic lights on the left, the camera image with guide lines on the right.
+    """A panel with the five traffic lights on the left, the camera image with guide lines on the right.
 
     The panel is placed next to the image (np.hstack), so it never hides the field.
     With guides_shown False the camera image stays clean: no crosses, no tint, no spirit
@@ -395,7 +349,7 @@ def _draw_panel(checks, height, guides_shown=True):
     """The left panel: one card per traffic light, the START button and the keys."""
     panel = np.full((height, PANEL_WIDTH, 3), PANEL_COLOR, dtype=np.uint8)
     put_text(panel, "Setup", (20, 40), 0.95, TEXT_COLOR, 2)
-    put_text(panel, "camera, light and blocks", (122, 40), 0.55, MUTED_COLOR)
+    put_text(panel, "camera and light", (122, 40), 0.55, MUTED_COLOR)
     for number, check in enumerate(checks):
         top = CARD_TOP + number * (CARD_HEIGHT + CARD_GAP)
         rounded_box(panel, (20, top, PANEL_WIDTH - 20, top + CARD_HEIGHT), CARD_COLOR, 10)
@@ -478,7 +432,6 @@ def run_setup(capture, settings, window_name):
     """Shows the setup mode until Enter or START is pressed (returns True) or q (returns False); h hides the guides."""
     clicks = []
     cv2.setMouseCallback(window_name, lambda event, x, y, flags, param: _remember_click(event, window_name, x, y, clicks))
-    smoother = FrameSmoother(BLOCKS_FRAMES)
     turns = 0
     guides_shown = True
     while True:
@@ -489,7 +442,7 @@ def run_setup(capture, settings, window_name):
         if homography is not None:
             turns = upright_turns(homography, settings.board)
         frame = turn_upright(frame, turns)
-        checks, corners = check_setup(frame, settings, smoother)
+        checks, corners = check_setup(frame, settings)
         show(window_name, draw_setup(frame, checks, corners, guides_shown))
         # The keys only arrive while the setup window is the active window (click into it once).
         key = cv2.waitKey(1) & 0xFF
@@ -538,14 +491,6 @@ def _inside(box, x, y):
     """True if the point (x, y) lies in the box (left, top, right, bottom)."""
     left, top, right, bottom = box
     return left <= x < right and top <= y < bottom
-
-
-def _block_names(counter):
-    """Short list of blocks, e.g. "2x red cuboid, blue cube"."""
-    names = []
-    for (color, shape), count in sorted(counter.items(), key=lambda entry: SHAPE_NAMES.index(entry[0][1])):
-        names.append(f"{count}x {color} {shape}" if count > 1 else f"{color} {shape}")
-    return ", ".join(names)
 
 
 def _length(first, second):

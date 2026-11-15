@@ -13,7 +13,6 @@ from objekterkennung.capture.setup_check import (
     WARN,
     WINDOW_MAX_WIDTH,
     camera_lean,
-    check_blocks,
     check_centre,
     check_light,
     check_setup,
@@ -25,7 +24,6 @@ from objekterkennung.capture.setup_check import (
     is_start_click,
 )
 from objekterkennung.config import load_settings
-from objekterkennung.output.models import DetectedObject
 
 PX_PER_MM = 3
 MARGIN_MM = 50
@@ -33,7 +31,7 @@ MARGIN_MM = 50
 PAPER = 162
 
 
-def test_A6_straight_centred_board_has_green_camera_and_light():
+def test_A6_straight_centred_board_is_all_green():
     settings = load_settings()
     board = settings.board
     frame = _draw_board(board)
@@ -42,45 +40,8 @@ def test_A6_straight_centred_board_has_green_camera_and_light():
 
     checks, corners = check_setup(frame, settings)
 
-    assert [check.level for check in checks[:5]] == [OK, OK, OK, OK, OK]
-    assert checks[5].name == "Blocks" and checks[5].level == BAD
+    assert [check.level for check in checks] == [OK, OK, OK, OK, OK]
     assert corners is not None
-
-
-def test_A1_all_sixteen_cuboids_of_the_test_pattern_found_is_green():
-    check = check_blocks(_test_pattern())
-
-    assert check.level == OK and check.text == "16 of 16 found"
-
-
-def test_A1_missing_red_cuboid_is_named():
-    objects = _test_pattern()
-    objects.remove(DetectedObject("cuboid", "red", 0.5, 0.5))
-
-    check = check_blocks(objects)
-
-    assert check.level == WARN and check.text == "15 of 16 found - missing: red cuboid"
-
-
-def test_A1_cuboid_found_as_two_cubes_is_named():
-    objects = _test_pattern()
-    objects.remove(DetectedObject("cuboid", "green", 0.5, 0.5))
-    objects += [DetectedObject("cube", "green", 0.4, 0.5), DetectedObject("cube", "green", 0.6, 0.5)]
-
-    check = check_blocks(objects)
-
-    assert check.level == BAD and check.text == "15 of 16 found - missing: green cuboid, extra: 2x green cube"
-
-
-def test_A1_empty_field_is_red():
-    check = check_blocks([])
-
-    assert check.level == BAD and "0 of 16" in check.text
-
-
-def _test_pattern():
-    """The 16 cuboids of the setup: 4 of every colour."""
-    return [DetectedObject("cuboid", color, 0.5, 0.5) for color in ("red", "yellow", "green", "blue") for _ in range(4)]
 
 
 def test_A6_small_board_at_the_side_asks_to_move_the_camera():
