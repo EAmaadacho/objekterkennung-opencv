@@ -125,9 +125,9 @@ Wo es geht, nutzt das Programm die Verfahren aus dem Skript. Abgewichen wird nur
 
 | Abweichung | Grund |
 |---|---|
-| ArUco-Marker, `findHomography`, `warpPerspective` | Die Kamera schaut leicht schräg auf das Feld; `warpAffine` aus dem Skript kann eine schräge Ansicht nicht gerade rücken. |
+| ArUco-Marker, `findHomography`, `warpPerspective`, `perspectiveTransform` | Die Kamera schaut leicht schräg auf das Feld; `warpAffine` aus dem Skript kann eine schräge Ansicht nicht gerade rücken. |
 | `distanceTransform`, `watershed` | Zwei gleichfarbige Steine, die bündig aneinanderliegen, bilden eine einzige Fläche; Erodieren allein trennt sie nicht. |
-| `convexHull`, `minAreaRect` | Die Ecken-Zählung mit `approxPolyDP` (Übung 11) stimmte an 1 140 Objekten aus echten Aufnahmen nur zu 62 %, weil die Steine Seitenflächen und runde Kanten zeigen. |
+| `convexHull`, `minAreaRect`, `boxPoints`, `fillPoly` | Die Ecken-Zählung mit `approxPolyDP` (Übung 11) stimmte an 1 140 Objekten aus echten Aufnahmen nur zu 62 %, weil die Steine Seitenflächen und runde Kanten zeigen. |
 | `HoughCircles` | Eine Kugel an einem gleichfarbigen Stein verschmilzt mit ihm; nur ihr runder Umriss trennt sie. |
 | `setMouseCallback` | Buttons zusätzlich zu den Tasten, damit man in der Vorführung mit der Maus bedienen kann. |
 | Kameraeinstellungen (`CAP_DSHOW`, MJPG, Full HD) | Ohne sie liefert die Webcam nur einen gezoomten Ausschnitt in 640 × 480. |

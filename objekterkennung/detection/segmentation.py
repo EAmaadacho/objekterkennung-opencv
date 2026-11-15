@@ -80,7 +80,7 @@ def color_mask(field_image, color, settings):
     """
     hsv = cv2.cvtColor(field_image, cv2.COLOR_BGR2HSV)
     mask = np.zeros(hsv.shape[:2], dtype=np.uint8)
-    # Red needs two ranges, because its hue lies at both ends of the scale (0-10 and 170-180).
+    # Red needs two ranges, because its hue lies at both ends of the scale (e.g. 0-3 and 160-180).
     for hue_low, hue_high in settings.colors.hue_ranges[color]:
         lower = (hue_low, settings.colors.min_saturation[color], settings.colors.min_brightness[color])
         upper = (min(hue_high, HUE_MAX), 255, 255)
@@ -107,7 +107,7 @@ def split_touching(mask, settings, field_image=None):
     1. Areas smaller than min_object_area_px (config.json, "detection") are noise and dropped.
     2. A ball is cut out first, because it can melt together with a block of the same
        colour, e.g. the green sphere and the green cuboid. The rest starts again at step 1;
-       Two pieces of it that form one cuboid partly under the ball are joined again.
+       two pieces of it that form one cuboid partly under the ball are joined again.
     3. The visible edges of the field image cut the area into top faces ("seeds"): two cubes
        lying flush show a dark line between them. Large areas are also searched with finer
        edges, because that seam can be very faint. An area longer than one block is
@@ -228,11 +228,15 @@ def _edges(field_image, low, high, min_length_px=0):
     for channel in cv2.split(blurred):
         edges = edges | cv2.Canny(channel, low, high)
     if min_length_px:
-        _, labels, stats, _ = cv2.connectedComponentsWithStats(edges)
-        length = np.maximum(stats[:, cv2.CC_STAT_WIDTH], stats[:, cv2.CC_STAT_HEIGHT])
-        long_enough = length >= min_length_px
-        long_enough[0] = False  # label 0 is the background
-        edges = np.where(long_enough[labels], 255, 0).astype(np.uint8)
+        # Each connected line has one outer contour (findContours, script ch. 6.1). RETR_CCOMP
+        # also returns the lines that lie inside a closed outline, without a parent (-1); the
+        # contours with a parent are only the holes of a line. A line whose bounding rectangle
+        # is short in x and y is painted over, inside included.
+        contours, hierarchy = cv2.findContours(edges, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
+        for contour, (_, _, _, parent) in zip(contours, hierarchy[0] if contours else []):
+            _, _, width, height = cv2.boundingRect(contour)
+            if parent == -1 and max(width, height) < min_length_px:
+                cv2.drawContours(edges, [contour], -1, 0, thickness=cv2.FILLED)
     return cv2.dilate(edges, np.ones((3, 3), np.uint8))
 
 
