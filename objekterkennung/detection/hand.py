@@ -3,6 +3,8 @@
 HSV thresholds (script ch. 7.2), opening (ch. 5.2) and contours (ch. 6.1).
 """
 
+import dataclasses
+
 import cv2
 import numpy as np
 
@@ -14,6 +16,10 @@ WARM_HUE_MIN = 165
 SKIN_SATURATION_MIN = 25
 SKIN_VALUE_MIN = 50
 DARK_VALUE_MAX = 60
+# Skin under the lamp can have a red hue with saturation 80-100. The red blocks count from
+# saturation 80 (config.json); for the hand check a red block must reach 100, as before the
+# test of 15.11., otherwise a pale hand would be taken out as a block.
+KNOWN_SATURATION_MIN = {"red": 100}
 # Around every block 7 px on each side (a 15 px kernel) are counted as the block too,
 # because its border is often blurred.
 KNOWN_MARGIN_PX = 15
@@ -43,10 +49,20 @@ def hand_in_field(field_image, settings):
     skin = warm & (saturation >= SKIN_SATURATION_MIN) & (value >= SKIN_VALUE_MIN)
     dark = value < DARK_VALUE_MAX
     known = np.zeros(hue.shape, dtype=np.uint8)
+    block_settings = _block_settings(settings)
     for color in settings.colors.hue_ranges:
-        known = known | color_mask(field_image, color, settings)
+        known = known | color_mask(field_image, color, block_settings)
     known = cv2.dilate(known, np.ones((KNOWN_MARGIN_PX, KNOWN_MARGIN_PX), np.uint8))
     return any(_large_area_at_edge(candidate & (known == 0)) for candidate in (skin, dark))
+
+
+def _block_settings(settings):
+    """The settings with the stricter saturation of KNOWN_SATURATION_MIN, used only to take the blocks out."""
+    saturation = dict(settings.colors.min_saturation)
+    for color, minimum in KNOWN_SATURATION_MIN.items():
+        saturation[color] = max(saturation[color], minimum)
+    colors = dataclasses.replace(settings.colors, min_saturation=saturation)
+    return dataclasses.replace(settings, colors=colors)
 
 
 def _large_area_at_edge(candidate):

@@ -12,6 +12,9 @@ WHITE = (235, 225, 220)
 # Measured on the real field: skin has a warm hue but much less saturation than the red blocks.
 SKIN = (150, 175, 215)
 RED = (40, 30, 210)
+# Pale, reddish skin under the lamp: hue about 175, saturation 90. That is above the red
+# limit of the blocks (80), but below 100.
+PALE_SKIN = (148, 136, 210)
 # Paper with a pink tint: hue about 173, saturation 30.
 PINK_PAPER = (138, 132, 150)
 
@@ -20,6 +23,16 @@ def test_A4_hand_reaching_in_from_the_edge_is_noticed():
     settings = load_settings()
     field = _empty_field()
     cv2.ellipse(field, (660, 350), (120, 60), 0, 0, 360, SKIN, -1)
+
+    found = hand_in_field(field, settings)
+
+    assert found
+
+
+def test_A4_pale_reddish_hand_is_noticed():
+    settings = load_settings()
+    field = _empty_field()
+    cv2.ellipse(field, (660, 350), (120, 60), 0, 0, 360, PALE_SKIN, -1)
 
     found = hand_in_field(field, settings)
 
