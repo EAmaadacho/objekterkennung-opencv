@@ -6,6 +6,7 @@ import numpy as np
 from objekterkennung.capture.board import ARUCO_DICTIONARY
 from objekterkennung.capture.setup_check import (
     BAD,
+    GUIDES_BUTTON,
     OK,
     PANEL_WIDTH,
     START_BUTTON,
@@ -20,6 +21,7 @@ from objekterkennung.capture.setup_check import (
     check_straight,
     draw_setup,
     field_centre_lines,
+    is_guides_click,
     is_start_click,
 )
 from objekterkennung.config import load_settings
@@ -216,6 +218,10 @@ def test_A6_setup_view_fits_the_screen_and_has_a_start_button():
     assert view.shape[1] <= WINDOW_MAX_WIDTH
     assert is_start_click((left + right) // 2, (top + bottom) // 2)
     assert not is_start_click(right + 10, top)
+    left, top, right, bottom = GUIDES_BUTTON
+    assert bottom <= view.shape[0]
+    assert is_guides_click((left + right) // 2, (top + bottom) // 2)
+    assert not is_start_click((left + right) // 2, (top + bottom) // 2)
 
 
 def test_A6_hidden_guides_show_the_plain_camera_image():

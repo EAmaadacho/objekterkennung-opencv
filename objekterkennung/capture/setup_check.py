@@ -110,10 +110,12 @@ CARD_TOP = 84
 CARD_HEIGHT = 56
 CARD_GAP = 8
 START_BUTTON = (20, 488, 420, 532)  # left, top, right, bottom in the window
+GUIDES_BUTTON = (20, 600, 420, 640)
 START_KEYS = (13, 10)  # Enter on Windows and Linux
 QUIT_KEY = "q"
 # Hides all guides on the camera image, so the blocks can be seen as they look in the light.
-GUIDES_KEY = "h"
+# Both h and H count, so it also works with Caps Lock on; the button below START does the same.
+GUIDES_KEYS = ("h", "H")
 
 
 @dataclass(frozen=True)
@@ -410,8 +412,12 @@ def _draw_panel(checks, height, guides_shown=True):
     put_text(panel, "START", (left + 160, bottom - 15), 0.7, TEXT_COLOR if ready else MUTED_COLOR, 2)
     note = "all green - ready to start" if ready else "fix the yellow and red points first"
     put_text(panel, note, (left, bottom + 26), 0.45, TEXT_COLOR)
-    guides = "hide guides" if guides_shown else "show guides"
-    put_text(panel, f"Enter = start    h = {guides}    q = quit", (left, bottom + 50), 0.45, MUTED_COLOR)
+    put_text(panel, "Enter = start    h = guides    q = quit", (left, bottom + 50), 0.45, MUTED_COLOR)
+    left, top, right, bottom = GUIDES_BUTTON
+    rounded_box(panel, GUIDES_BUTTON, CARD_COLOR, 20)
+    label = "Hide guides (h)" if guides_shown else "Show guides (h)"
+    (label_width, _), _ = cv2.getTextSize(label, FONT, 0.55, 1)
+    put_text(panel, label, ((left + right - label_width) // 2, bottom - 14), 0.55, TEXT_COLOR)
     return panel
 
 
@@ -458,14 +464,18 @@ def _draw_level(image, lean):
 
 def is_start_click(x, y):
     """True if a mouse click in the setup window hit the START button."""
-    left, top, right, bottom = START_BUTTON
-    return left <= x < right and top <= y < bottom
+    return _inside(START_BUTTON, x, y)
+
+
+def is_guides_click(x, y):
+    """True if a mouse click in the setup window hit the button that hides or shows the guides."""
+    return _inside(GUIDES_BUTTON, x, y)
 
 
 def run_setup(capture, settings, window_name):
     """Shows the setup mode until Enter or START is pressed (returns True) or q (returns False); h hides the guides."""
     clicks = []
-    cv2.setMouseCallback(window_name, lambda event, x, y, flags, param: _remember_start(event, window_name, x, y, clicks))
+    cv2.setMouseCallback(window_name, lambda event, x, y, flags, param: _remember_click(event, window_name, x, y, clicks))
     smoother = FrameSmoother(BLOCKS_FRAMES)
     turns = 0
     guides_shown = True
@@ -479,19 +489,26 @@ def run_setup(capture, settings, window_name):
         frame = turn_upright(frame, turns)
         checks, corners = check_setup(frame, settings, smoother)
         show(window_name, draw_setup(frame, checks, corners, guides_shown))
+        # The keys only arrive while the setup window is the active window (click into it once).
         key = cv2.waitKey(1) & 0xFF
-        if key in START_KEYS or clicks:
+        clicked = clicks.pop(0) if clicks else None
+        if key in START_KEYS or clicked == "start":
             return True
         if key == ord(QUIT_KEY):
             return False
-        if key == ord(GUIDES_KEY):
+        if key in (ord(name) for name in GUIDES_KEYS) or clicked == "guides":
             guides_shown = not guides_shown
 
 
-def _remember_start(event, window_name, x, y, clicks):
-    """Keeps a left click on the START button."""
-    if event == cv2.EVENT_LBUTTONDOWN and is_start_click(*to_image(window_name, x, y)):
-        clicks.append((x, y))
+def _remember_click(event, window_name, x, y, clicks):
+    """Keeps a left click on the START button or on the guides button, as "start" or "guides"."""
+    if event != cv2.EVENT_LBUTTONDOWN:
+        return
+    x, y = to_image(window_name, x, y)
+    if is_start_click(x, y):
+        clicks.append("start")
+    elif is_guides_click(x, y):
+        clicks.append("guides")
 
 
 # Small helpers used by the parts above.
@@ -513,6 +530,12 @@ def _edges_in_image(corners):
     by_y = sorted(range(4), key=lambda i: middles[i][1])
     by_x = sorted(range(4), key=lambda i: middles[i][0])
     return {"top": edges[by_y[0]], "bottom": edges[by_y[3]], "left": edges[by_x[0]], "right": edges[by_x[3]]}
+
+
+def _inside(box, x, y):
+    """True if the point (x, y) lies in the box (left, top, right, bottom)."""
+    left, top, right, bottom = box
+    return left <= x < right and top <= y < bottom
 
 
 def _block_names(counter):
