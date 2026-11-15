@@ -43,7 +43,8 @@ def _split_all(mask, color, field_image, settings):
     """All object masks of one colour; a square is checked once more for being two prisms.
 
     Only colours with two prisms (config.json, "objects": "prism_pair_colors") can form
-    such a square; for all others a dark line across a cube is never a joint.
+    such a square; for all others a dark line across a cube is never a joint. In the
+    current set every prism exists once, so the list is empty and no square is checked.
     """
     for object_mask in split_touching(mask, settings, field_image):
         if color in settings.objects.prism_pair_colors and _about_square(object_mask):

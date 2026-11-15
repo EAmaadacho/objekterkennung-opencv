@@ -33,7 +33,7 @@
   },
   "objects": {
     "sphere_diameter_mm": 46,
-    "prism_pair_colors": ["blue"]
+    "prism_pair_colors": []
   },
   "light": {
     "paper_brightness_min": 150,

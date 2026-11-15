@@ -9,8 +9,8 @@ SHAPE_LABELS = {"cube": "cube", "cuboid": "cuboid", "prism": "triangular prism",
 # The 12 blocks of the project as (colour, shape) and how many of each (docs/anforderungen.md).
 # tools/evaluate_tests.py compares every test layout with them.
 EXPECTED_OBJECTS = Counter({
-    ("red", "cube"): 2, ("blue", "cube"): 2, ("yellow", "cuboid"): 2, ("green", "cuboid"): 1,
-    ("blue", "prism"): 2, ("red", "prism"): 1, ("red", "sphere"): 1, ("green", "sphere"): 1,
+    ("red", "cube"): 2, ("blue", "cube"): 2, ("yellow", "cuboid"): 2, ("green", "cuboid"): 2,
+    ("blue", "prism"): 1, ("red", "prism"): 1, ("red", "sphere"): 1, ("green", "sphere"): 1,
 })
 
 

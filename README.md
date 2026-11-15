@@ -51,7 +51,7 @@ Die Reihenfolge folgt einem Kamerabild auf seinem Weg durch das Programm. Die Sc
 3. `detection/detector.py`: der Einstieg in die Erkennung. Jede Farbe wird für sich gesucht, danach wird jedem Teil eine Form zugeordnet.
 4. `detection/segmentation.py`: die Farbmaske in HSV und das Trennen von Teilen, die sich berühren. Das ist der umfangreichste Schritt.
 5. `detection/shapes.py`: die Regel, nach der aus einem Umriss Würfel, Quader, Prisma oder Kugel wird.
-6. `detection/ball.py` und `detection/prism_pair.py`: zwei Sonderfälle beim Trennen, nämlich eine Kugel an einem gleichfarbigen Quader und zwei Prismen, die zusammen wie ein Würfel aussehen.
+6. `detection/ball.py` und `detection/prism_pair.py`: zwei Sonderfälle beim Trennen, nämlich eine Kugel an einem gleichfarbigen Quader und zwei Prismen, die zusammen wie ein Würfel aussehen (in der jetzigen Objektmenge abgeschaltet, weil es jedes Prisma nur einmal gibt).
 7. `output/smoothing.py` und `output/tracker.py`: die Ergebnisse über mehrere Bilder glätten und Veränderungen melden.
 8. `output/display.py`: das Fenster mit Kamerabild und beschriftetem Feld.
 
@@ -139,7 +139,7 @@ Die Namen im Code sind dieselben wie hier: `settings.colors.min_saturation` ist 
 | `colors.min_saturation` | Mindest-Sättigung pro Farbe: wie kräftig eine Farbe sein muss, um zu zählen. Weißes Papier und graue Schatten liegen darunter. | 0–255, z. B. rot 80 | Höher, wenn Schatten oder Haut als Farbe erkannt werden; niedriger, wenn Steine bei starkem Licht blass werden und fehlen. |
 | `colors.min_brightness` | Mindest-Helligkeit pro Farbe: dunklere Pixel zählen nicht zu dieser Farbe. Grün liegt niedriger, weil der dunkelgrüne Quader nur Helligkeit 27–54 hat. | 0–255, z. B. grün 40, sonst 60 | Niedriger, wenn dunkle Steine oder ihre Seitenflächen fehlen. |
 | `objects.sphere_diameter_mm` | Durchmesser der Kugeln. Daraus folgt der Radius, nach dem `HoughCircles` sucht. | mm, 46 | Bei anderen Kugeln. |
-| `objects.prism_pair_colors` | Farben, von denen zwei Prismen im Feld liegen. Nur bei ihnen wird geprüft, ob ein Quadrat eigentlich zwei Prismen ist. | Liste, `["blue"]` | Wenn sich die Objektmenge ändert. |
+| `objects.prism_pair_colors` | Farben, von denen zwei Prismen im Feld liegen. Nur bei ihnen wird geprüft, ob ein Quadrat eigentlich zwei Prismen ist. In der jetzigen Objektmenge gibt es jedes Prisma nur einmal (siehe `docs/anforderungen.md`), deshalb ist die Liste leer und `prism_pair.py` wird nicht benutzt. | Liste, `[]` (früher `["blue"]`) | Wenn wieder zwei gleichfarbige Prismen in die Objektmenge kommen. |
 | `light.paper_brightness_min`, `light.paper_brightness_max` | Zielbereich für die Helligkeit des weißen Papiers im Einrichtungsmodus. In diesem Licht (dunkelste Lampenstufe) wurden die Farbbereiche eingestellt. | 0–255, 150–165 | Nach einer neuen Kalibrierung bei anderem Licht. |
 | `detection.min_object_area_px` | Kleinste Fläche, die als Objekt zählt; alles Kleinere ist Rauschen. | Pixel im geraden Bild, 3000 (≈ 16 × 16 mm) | Höher, wenn kleine Flecken als Objekt erscheinen. |
 | `changes.frames_until_reported` | Wie viele Bilder hintereinander eine Änderung gleich bleiben muss, bevor sie gemeldet wird. Über genauso viele Bilder wird auch die angezeigte Position geglättet (Median). | Bilder, 10 (≈ 1–1,5 s) | Höher, wenn Meldungen flackern; niedriger, wenn sie zu spät kommen. |
