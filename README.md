@@ -1,6 +1,6 @@
 # Objekterkennung mit OpenCV
 
-Das Programm erkennt mit einer Webcam Form, Farbe und Position von Holzobjekten auf einem 18 cm × 18 cm großen Spielfeld und meldet jede Veränderung. Ein Beispiel: Liegt ein roter Würfel genau in der Mitte des Feldes, zeigt es „red cube (0.50 | 0.50)“; schiebt man ihn nach rechts oben, meldet es „MOVED: red cube (0.50 | 0.50) -> (0.80 | 0.70)“. Wie der Code sind alle Ausgaben und die Oberfläche auf Englisch. Gebaut ist es mit Python und OpenCV nach den Verfahren des Vorlesungsskripts. Es läuft komplett offline, ohne Netzwerk und ohne KI oder trainierte Modelle.
+Das Programm erkennt mit einer Webcam Form, Farbe und Position von Holzobjekten auf einem 18 cm × 18 cm großen Spielfeld und meldet jede Veränderung. Ein Beispiel: Liegt ein roter Würfel genau in der Mitte des Feldes, zeigt es „red cube (0.50 | 0.50)“; schiebt man ihn nach rechts oben, meldet es „MOVED: red cube (0.50 | 0.50) -> (0.80 | 0.70)“. Wie der Code sind alle Ausgaben und die Oberfläche auf Englisch. Gebaut ist es mit Python und OpenCV und baut auf den Verfahren des Vorlesungsskripts auf; wo sie nicht ausreichen, kommen weitere OpenCV-Funktionen dazu. Es läuft komplett offline, ohne Netzwerk und ohne KI oder trainierte Modelle.
 
 Entstanden im Modul PALG (Projekt Algorithmen) an der FHDW, Studiengruppe MFAX424A. Die Anforderungen A1–A7 und die Objektmenge stehen in `docs/anforderungen.md`.
 
