@@ -48,7 +48,7 @@ JOIN_COVER_MIN = 0.18
 JOIN_FILL_MIN = 0.9
 # Wood grain on some blocks gives Canny many short lines, so a top face shows no smooth
 # part to start from, and a row of flush blocks of one colour would stay one area. For an
-# area longer than any single block (a cuboid is 58 mm = 193 px) the edges are searched once
+# area longer than any single block (a cuboid is 50 mm = 167 px) the edges are searched once
 # more without lines shorter than GRAIN_EDGE_MIN_PX; seams and outlines run across a whole
 # block and stay.
 ROW_LENGTH_MIN_PX = 230

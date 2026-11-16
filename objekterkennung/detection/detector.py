@@ -18,7 +18,7 @@ from objekterkennung.output.models import DetectedObject
 
 # Two prisms as a square can carry a thin side face of the block next to them and then measure
 # just over the cube limit, e.g. 1.51 : 1. Up to this ratio a "cuboid" is still
-# checked for a joint; a real cuboid is 2.4 : 1.
+# checked for a joint; a real cuboid is about 2 : 1.
 PAIR_ASPECT_MAX = 1.7
 
 

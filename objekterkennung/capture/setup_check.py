@@ -53,7 +53,7 @@ SIZE_MIN = 0.25
 SIZE_MAX = 0.78
 # Straight: opposite field edges may differ by this share in length, the field may be turned this much.
 # With the camera about 47 cm above the field, 5 % is a lean of about 7 degrees: the tops of
-# the 32 mm blocks then shift by about 4 mm. The webcam lens alone bends the field edges by
+# the 25 mm blocks then shift by about 3 mm. The webcam lens alone bends the field edges by
 # 1-2 %, so a much stricter limit cannot be reached.
 TILT_GOOD = 0.05
 TILT_MAX = 0.1
