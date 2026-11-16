@@ -1,8 +1,9 @@
 """Recognises the shape of one object from its outline seen from above (A1).
 
-Contours, area, moments and the enclosing circle come from script ch. 6.1. The convex hull and
-cv2.minAreaRect replace the corner count with approxPolyDP from exercise 11, which was right
-for only 62 % of the real objects (see README).
+Contours, area, moments and the enclosing circle come from script ch. 6.1; the convex hull
+and the smallest rotated rectangle (cv2.minAreaRect) build on these contours. The shape is told
+by how well it fills that rectangle and circle, because real blocks show side faces and round
+edges that make a corner count unreliable.
 """
 
 import math
@@ -15,8 +16,7 @@ import cv2
 BOX_FILL_MIN = 0.75
 # How much of its smallest surrounding circle a shape fills:
 # circle 1.0, square 0.64, cuboid (2.4 : 1) 0.45, triangle at most 0.41. A cube seen at a slant
-# shows side faces and looks like a hexagon (up to 0.83). In the test recordings real
-# balls filled 0.91 to 0.99 and cubes at most 0.81, so the limit lies in between.
+# shows side faces and looks like a hexagon (up to 0.83); a ball fills more than 0.9.
 CIRCLE_FILL_MIN = 0.86
 # A cube is about 1 : 1 from above, a cuboid 2.4 : 1 (58 x 24 mm); the limit lies in between.
 CUBOID_ASPECT_MIN = 1.5

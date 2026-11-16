@@ -17,8 +17,7 @@ MAX_OFFSET_PX = 7
 # The joint is compared with the strips this far away on both sides.
 NEIGHBOUR_PX = 6
 # The joint must be at least this much darker (grey levels 0-255) than its
-# neighbours. In the test recordings joints were 9.6 to 56 darker, the darkest
-# line through the middle of a real cube only 7.6.
+# neighbours; the middle of a real cube is less dark than that.
 JOINT_CONTRAST_MIN = 9
 # Rows with fewer object pixels are ignored, e.g. the tips of the rotated square.
 MIN_ROW_PX = 30

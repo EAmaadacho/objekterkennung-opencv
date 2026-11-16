@@ -1,6 +1,6 @@
 # Objekterkennung mit OpenCV
 
-Das Programm erkennt mit einer Webcam Form, Farbe und Position von Holzobjekten auf einem 18 cm × 18 cm großen Spielfeld und meldet jede Veränderung. Ein Beispiel: Liegt ein roter Würfel genau in der Mitte des Feldes, zeigt es „red cube (0.50 | 0.50)“; schiebt man ihn nach rechts oben, meldet es „MOVED: red cube (0.50 | 0.50) -> (0.80 | 0.70)“. Wie der Code sind alle Ausgaben und die Oberfläche auf Englisch. Gebaut ist es mit Python und OpenCV, ohne Netzwerk und ohne trainierte Modelle.
+Das Programm erkennt mit einer Webcam Form, Farbe und Position von Holzobjekten auf einem 18 cm × 18 cm großen Spielfeld und meldet jede Veränderung. Ein Beispiel: Liegt ein roter Würfel genau in der Mitte des Feldes, zeigt es „red cube (0.50 | 0.50)“; schiebt man ihn nach rechts oben, meldet es „MOVED: red cube (0.50 | 0.50) -> (0.80 | 0.70)“. Wie der Code sind alle Ausgaben und die Oberfläche auf Englisch. Gebaut ist es mit Python und OpenCV nach den Verfahren des Vorlesungsskripts. Es läuft komplett offline, ohne Netzwerk und ohne KI oder trainierte Modelle.
 
 Entstanden im Modul PALG (Projekt Algorithmen) an der FHDW, Studiengruppe MFAX424A. Die Anforderungen A1–A7 und die Objektmenge stehen in `docs/anforderungen.md`.
 
@@ -55,13 +55,13 @@ Die Reihenfolge folgt einem Kamerabild auf seinem Weg durch das Programm.
 
 Der Rest dient dem Aufbau und der Bedienung: `capture/setup_check.py` (Einrichtungsmodus), `capture/calibration.py` (Kalibriermodus), `detection/hand.py` (Hand im Feld) und `output/protocol.py` (Protokoll). `detection/prism_pair.py` trennt zwei gleichfarbige Prismen, die zusammen ein Quadrat bilden; in der jetzigen Objektmenge gibt es jedes Prisma nur einmal, deshalb ist dieser Schritt in `config.json` abgeschaltet.
 
-Jede Datei beginnt mit einem kurzen Text, der sagt, welche Anforderung sie umsetzt und, wo es passt, auf welchem Kapitel des Vorlesungsskripts sie beruht. Die Schwellwerte stehen als benannte Konstanten oben in ihrer Datei, jeweils mit dem Grund für ihren Wert, meist gemessen an Aufnahmen aus den Testläufen. Die Tests tragen die Kennung der Anforderung im Namen, etwa `test_A5_two_touching_cubes_are_split`.
+Jede Datei beginnt mit einem kurzen Text, der sagt, welche Anforderung sie umsetzt und auf welchem Kapitel des Vorlesungsskripts sie beruht. Die Schwellwerte stehen als benannte Konstanten oben in ihrer Datei. Die Tests tragen die Kennung der Anforderung im Namen, etwa `test_A5_two_touching_cubes_are_split`.
 
 ## Aufbau
 
 1. `assets/Spielfeld_A4.pdf` auf weißes A4-Papier drucken, mit 100 % („Tatsächliche Größe“). Den Feldrahmen nachmessen (18 cm) und das Blatt auf Pappe kleben.
 2. Die Webcam etwa 45–50 cm senkrecht über der Blattmitte befestigen, alle vier Marker im Bild.
-3. Eine feste Lampe seitlich oberhalb, Raum abgedunkelt, kein Fensterlicht. Getestet wurde mit einer EMEET C960 und einer Klemmleuchte auf der dunkelsten Stufe.
+3. Eine feste Lampe seitlich oberhalb, Raum abgedunkelt, kein Fensterlicht.
 
 Koordinaten: (0,0) unten links, x nach rechts, y nach oben, (1,1) oben rechts, so wie auf dem Spielfeld aufgedruckt.
 
@@ -92,53 +92,10 @@ Nach dem Start kommt der **Einrichtungsmodus**. Er prüft live fünf Punkte und 
 
 `main.py --calibrate` startet mit dem Kalibriermodus, `main.py --skip-setup` überspringt den Einrichtungsmodus.
 
-## Einstellungen in config.json
+## Einstellungen
 
-In `config.json` steht alles, was vom Aufbau abhängt. Die Namen im Code sind dieselben: `settings.colors.min_saturation` ist der Wert `colors.min_saturation`.
-
-| Feld | Bedeutung | Wert |
-|---|---|---|
-| `camera.number`, `width_px`, `height_px` | welche Webcam, in welcher Auflösung | 1, 1920 × 1080 |
-| `board.*` | Maße des gedruckten Spielfelds und Größe des geraden Bilds | 180 mm Feld, 600 px |
-| `colors.hue_ranges` | Farbtonbereich pro Farbe (Rot hat zwei, weil es an beiden Enden der Skala liegt) | z. B. blau 100–130 |
-| `colors.min_saturation`, `min_brightness` | wie kräftig und hell ein Pixel sein muss, um zu einer Farbe zu zählen | z. B. rot 80 / 60 |
-| `objects.sphere_diameter_mm` | Kugeldurchmesser, daraus der Radius für `HoughCircles` | 46 |
-| `objects.prism_pair_colors` | Farben, von denen zwei Prismen vorkommen | leer |
-| `light.paper_brightness_min/max` | Zielbereich der Licht-Ampel | 150–165 |
-| `detection.min_object_area_px` | kleinste Fläche, die als Objekt zählt | 3000 px (≈ 16 × 16 mm) |
-| `changes.frames_until_reported` | so viele Bilder muss eine Änderung stabil sein | 10 |
-| `changes.min_move_share_of_field` | ab dieser Strecke gilt ein Objekt als verschoben | 0,02 (≈ 3,6 mm) |
-
-## Verfahren und Bezug zum Vorlesungsskript
-
-Wo es geht, nutzt das Programm die Verfahren aus dem Skript. Abgewichen wird nur dort, wo das Skript-Verfahren für diese Aufgabe nachweislich nicht ausreicht.
-
-| Schritt | Verfahren | Skript |
-|---|---|---|
-| Bild holen, anzeigen | `VideoCapture`, `imshow`, `waitKey`, `np.hstack` | Kap. 9.1, 2.3, 3.3.6 |
-| Farbe | `cvtColor` nach HSV, `inRange` | Kap. 2.2, 7.2 |
-| Maske säubern | Öffnen/Schließen (`morphologyEx`), Löcher füllen mit `findContours`/`drawContours` | Kap. 5.2, 6.1, Übung 12 |
-| Naht zwischen Steinen | `GaussianBlur`, `Canny`, `erode`/`dilate` | Kap. 4.1, 4.2, 5.1 |
-| Fläche, Form, Position | `findContours`, `contourArea`, `moments`, `boundingRect`, `minEnclosingCircle` | Kap. 6.1 |
-| Zwei Prismen als Quadrat | Ausschnitt (ROI), `getRotationMatrix2D`, `warpAffine` | Kap. 3.2, 3.3 |
-| Kalibrierung | Schieberegler (`createTrackbar`) | Kap. 4.3.4 |
-
-| Abweichung | Grund |
-|---|---|
-| ArUco-Marker, `findHomography`, `warpPerspective`, `perspectiveTransform` | Die Kamera schaut leicht schräg auf das Feld; `warpAffine` aus dem Skript kann eine schräge Ansicht nicht gerade rücken. |
-| `distanceTransform`, `watershed` | Zwei gleichfarbige Steine, die bündig aneinanderliegen, bilden eine einzige Fläche; Erodieren allein trennt sie nicht. |
-| `convexHull`, `minAreaRect`, `boxPoints`, `fillPoly` | Die Ecken-Zählung mit `approxPolyDP` (Übung 11) stimmte an 1 140 Objekten aus echten Aufnahmen nur zu 62 %, weil die Steine Seitenflächen und runde Kanten zeigen. |
-| `HoughCircles` | Eine Kugel an einem gleichfarbigen Stein verschmilzt mit ihm; nur ihr runder Umriss trennt sie. |
-| `setMouseCallback` | Buttons zusätzlich zu den Tasten, damit man in der Vorführung mit der Maus bedienen kann. |
-| Kameraeinstellungen (`CAP_DSHOW`, MJPG, Full HD) | Ohne sie liefert die Webcam nur einen gezoomten Ausschnitt in 640 × 480. |
-
-## Grenzen
-
-- Die Kamera sieht hohe Steine am Feldrand leicht von der Seite. In den Ecken weicht die Position deshalb um bis zu etwa 0,02–0,035 ab, in der Mitte praktisch nicht.
-- Gleichfarbige Steine, die bündig aneinanderliegen, werden nur über die sichtbare Naht getrennt. Ist sie sehr schwach, etwa zwischen einem roten Würfel und dem roten Prisma, können beide zu einem Teil verschmelzen.
-- Liegt die Kugel auf der Mitte des gleichfarbigen Quaders, kann ihr Schatten den Quader in zwei Stücke teilen.
-- Zu helles Licht macht Oberseiten blass, zu dunkles lässt Grün im Schatten verschwinden; deshalb prüft die Licht-Ampel auch während der Erkennung weiter.
+In `config.json` steht alles, was vom Aufbau abhängt: Kamera, Maße des Spielfelds, Farbbereiche in HSV und der Zielbereich für das Licht. Die Farbbereiche lassen sich im Kalibriermodus (`c`) mit Schiebereglern einstellen und speichern.
 
 ## Tests
 
-Die Tests brauchen keine Kamera; sie zeichnen ihre Bilder selbst. Start mit `.venv\Scripts\python -m pytest` (Windows) oder `.venv/bin/python -m pytest`. Bei jedem Push auf `main` laufen sie auch auf GitHub. Commit-Nachrichten sind auf Deutsch und folgen den Conventional Commits, z. B. `feat: Spielfeld über ArUco-Marker entzerren`.
+Die Tests brauchen keine Kamera; sie zeichnen ihre Bilder selbst. Start mit `.venv\Scripts\python -m pytest` (Windows) oder `.venv/bin/python -m pytest`. Bei jedem Push auf `main` laufen sie auch auf GitHub.

@@ -17,8 +17,8 @@ SKIN_SATURATION_MIN = 25
 SKIN_VALUE_MIN = 50
 DARK_VALUE_MAX = 60
 # Skin under the lamp can have a red hue with saturation 80-100. The red blocks count from
-# saturation 80 (config.json); for the hand check a red block must reach 100, as before the
-# test of 15.11., otherwise a pale hand would be taken out as a block.
+# saturation 80 (config.json); for the hand check a red block must reach 100, otherwise a
+# pale hand would be taken out as a block.
 KNOWN_SATURATION_MIN = {"red": 100}
 # Around every block 7 px on each side (a 15 px kernel) are counted as the block too,
 # because its border is often blurred.
@@ -38,22 +38,21 @@ def hand_in_field(field_image, settings):
 
     The blocks themselves are found by their colour masks first and taken out,
     so a block lying near the edge is not mistaken for a hand. Skin and dark areas are
-    measured each on their own: with many red blocks in the image the camera tints the
-    paper slightly pink, and next to a dark strip of table at the edge the two together
-    looked like a hand (live test 14.11.). Measured apart, 76 of 77 hands in the recordings
-    were still found, and the false alarms dropped from 11 to 2 of 213 frames without a hand.
+    measured each on their own, so that slightly pink paper next to a dark strip of table
+    at the edge does not add up to a hand.
     """
     hsv = cv2.cvtColor(field_image, cv2.COLOR_BGR2HSV)
-    hue, saturation, value = cv2.split(hsv)
-    warm = (hue <= WARM_HUE_MAX) | (hue >= WARM_HUE_MIN)
-    skin = warm & (saturation >= SKIN_SATURATION_MIN) & (value >= SKIN_VALUE_MIN)
-    dark = value < DARK_VALUE_MAX
-    known = np.zeros(hue.shape, dtype=np.uint8)
+    # A warm hue lies at both ends of the hue scale, like red, so skin needs two ranges.
+    skin = cv2.inRange(hsv, (0, SKIN_SATURATION_MIN, SKIN_VALUE_MIN), (WARM_HUE_MAX, 255, 255))
+    skin = skin | cv2.inRange(hsv, (WARM_HUE_MIN, SKIN_SATURATION_MIN, SKIN_VALUE_MIN), (180, 255, 255))
+    dark = cv2.inRange(hsv, (0, 0, 0), (180, 255, DARK_VALUE_MAX - 1))
+    known = np.zeros(hsv.shape[:2], dtype=np.uint8)
     block_settings = _block_settings(settings)
     for color in settings.colors.hue_ranges:
         known = known | color_mask(field_image, color, block_settings)
     known = cv2.dilate(known, np.ones((KNOWN_MARGIN_PX, KNOWN_MARGIN_PX), np.uint8))
-    return any(_large_area_at_edge(candidate & (known == 0)) for candidate in (skin, dark))
+    not_known = cv2.bitwise_not(known)
+    return any(_large_area_at_edge(candidate & not_known) for candidate in (skin, dark))
 
 
 def _block_settings(settings):
@@ -66,9 +65,8 @@ def _block_settings(settings):
 
 
 def _large_area_at_edge(candidate):
-    """True if the candidate pixels form an area that touches the edge and is as large and wide as a hand."""
-    rest = np.where(candidate, 255, 0).astype(np.uint8)
-    rest = cv2.morphologyEx(rest, cv2.MORPH_OPEN, np.ones((OPENING_PX, OPENING_PX), np.uint8))
+    """True if the candidate mask has an area that touches the edge and is as large and wide as a hand."""
+    rest = cv2.morphologyEx(candidate, cv2.MORPH_OPEN, np.ones((OPENING_PX, OPENING_PX), np.uint8))
     contours, _ = cv2.findContours(rest, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     height, width = rest.shape
     for contour in contours:

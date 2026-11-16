@@ -46,16 +46,15 @@ TEXT_COLOR = WHITE
 # below the field in the image, it can fill at most 70 % (180 of 256 mm) before a marker
 # leaves the image; with the paper turned by 90 degrees they lie left and right, and the
 # field can fill more. Above SIZE_MAX a block at the edge of the field leaves the image.
-# The setup used for all tests reached 36-38 % (camera arm at its lowest); with that and a
-# green light, 97 % of the blocks were found (13.11.). Below 25 % a cube is less than 25 px
-# wide in the camera image and the seam between two flush blocks disappears.
+# Below 25 % a cube is less than 25 px wide in the camera image and the seam between two
+# flush blocks disappears.
 SIZE_GOOD = 0.35
 SIZE_MIN = 0.25
 SIZE_MAX = 0.78
 # Straight: opposite field edges may differ by this share in length, the field may be turned this much.
 # With the camera about 47 cm above the field, 5 % is a lean of about 7 degrees: the tops of
 # the 32 mm blocks then shift by about 4 mm. The webcam lens alone bends the field edges by
-# 1-2 %, and the best real setup reached 2.5-3 %, so a stricter limit could not be reached.
+# 1-2 %, so a much stricter limit cannot be reached.
 TILT_GOOD = 0.05
 TILT_MAX = 0.1
 TURN_GOOD_DEG = 2
@@ -65,18 +64,13 @@ TURN_MAX_DEG = 6
 OFFSET_GOOD = 0.05
 OFFSET_MAX = 0.15
 # Light, measured on the white paper (low saturation) in the straight field. The target band
-# for a green light comes from config.json (section "light"): in the light-level test (13.11.)
-# the paper went from 173 at the strongest to 145 at the weakest lamp level, about 3 grey levels
-# per step. In the test of 15.11. a pale red cube was lost at 172-176 and the green cuboid in
-# the shadow of the ball at 137-139; 155-162 (darkest lamp level) worked best. A single level
-# cannot be told apart, because the camera adjusts its exposure. Below BRIGHTNESS_MIN the light
+# for a green light comes from config.json (section "light"). Too bright light makes the
+# block tops pale, too weak light lets green vanish in shadows. Below BRIGHTNESS_MIN the light
 # is clearly too weak.
 PAPER_SATURATION_MAX = 40
 BRIGHTNESS_MIN = 90
 BRIGHTNESS_TOO_HIGH = 235
-# The darkest of 3 x 3 field parts compared with the brightest one. In the recordings even
-# 61 % caused no error that came from the light (a pale block in a dark corner), so yellow
-# starts only at 65 %.
+# The darkest of 3 x 3 field parts compared with the brightest one.
 EVENNESS_GOOD = 0.65
 EVENNESS_MIN = 0.6
 # Share of overexposed pixels (brightness 250 or more): there a block loses its colour.
@@ -243,7 +237,7 @@ def check_light(field_image, light):
     """Brightness of the paper, how even it is over the field and how much is overexposed."""
     hsv = cv2.cvtColor(field_image, cv2.COLOR_BGR2HSV)
     value = hsv[:, :, 2]
-    paper = hsv[:, :, 1] <= PAPER_SATURATION_MAX
+    paper = cv2.inRange(hsv, (0, 0, 0), (180, PAPER_SATURATION_MAX, 255)) > 0
     if not paper.any():
         return Check("Light", BAD, "no white paper found")
     brightness = float(np.median(value[paper]))
@@ -310,7 +304,7 @@ def draw_setup(frame, checks, corners, guides_shown=True):
         color = LEVEL_COLORS[_worst(checks[1:4])]
         outline = np.int32(np.round(corners * scale))
         tint = image.copy()
-        cv2.fillPoly(tint, [outline], color)
+        cv2.drawContours(tint, [outline], -1, color, thickness=cv2.FILLED)
         cv2.addWeighted(tint, FIELD_TINT, image, 1 - FIELD_TINT, 0, dst=image)
         cv2.polylines(image, [outline], True, color, 2, cv2.LINE_AA)
         # A cross through the middle of the field, in the same colour: when the camera is

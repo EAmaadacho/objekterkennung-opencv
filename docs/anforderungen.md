@@ -25,6 +25,4 @@ Die Anforderungen stammen aus der Aufgabenstellung „PALG: Anwendung OpenCV“ 
 | 1 | rote Kugel |
 | 1 | grüne Kugel |
 
-12 Objekte: 4 Formen, 4 Farben, jede Form in mindestens 2 Farben, 4 Objekte doppelt, alle einfarbig und dreidimensional. Die Dreiecksprismen liegen auf ihrer Dreiecksfläche, damit sie von oben als Dreieck zu sehen sind.
-
-Warum diese Menge (geändert am 15.11. nach den Tests): Zwei gleichfarbige Prismen, die bündig aneinanderliegen, trennt nur eine sehr feine Fuge. Die blauen Prismen waren zudem viel blasser lackiert als die Würfel (Sättigung 70–100 statt etwa 225). Im Test vom 15.11. abends hatte dieses Paar in 27 % der Bilder einen Fehler. Deshalb gibt es jedes Prisma nur einmal. Die doppelten Objekte sind Würfel und Quader, deren Naht die Erkennung zuverlässig findet. Ein rotes Prisma bündig am roten Würfel verschmolz in etwa 12 % der Bilder; das bleibt eine bekannte Grenze. Die Bedingungen der Aufgabe bleiben erfüllt: Würfel in Rot und Blau, Quader in Gelb und Grün, Prisma in Blau und Rot, Kugel in Rot und Grün.
+12 Objekte: 4 Formen, 4 Farben, jede Form in mindestens 2 Farben, 4 Objekte doppelt (Würfel in Rot und Blau, Quader in Gelb und Grün, Prisma in Blau und Rot, Kugel in Rot und Grün), alle einfarbig und dreidimensional. Die Dreiecksprismen liegen auf ihrer Dreiecksfläche, damit sie von oben als Dreieck zu sehen sind.

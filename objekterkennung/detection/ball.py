@@ -1,7 +1,7 @@
 """Cuts a ball out of an area where it touches a block of the same colour (A1, A5).
 
-cv2.HoughCircles is not part of the lecture script. Only its round outline sets a ball
-apart from a block it touches; the README says why the script methods are not enough here.
+Only its round outline sets a ball apart from a block of the same colour it touches,
+so the ball is searched with cv2.HoughCircles.
 """
 
 import cv2
@@ -14,8 +14,8 @@ import numpy as np
 RADIUS_MIN_SHARE = 0.85
 RADIUS_MAX_SHARE = 1.17
 # Share of the circle along which the outline of the area really runs. A ball that
-# touches one or two blocks still shows most of its round outline (0.74 to 0.86 in
-# the test recordings); circles found in blocks reached at most 0.47.
+# touches one or two blocks still shows most of its round outline; a circle found
+# inside a block does not.
 OUTLINE_MATCH_MIN = 0.6
 # How far the outline may lie from the circle, in pixels.
 OUTLINE_TOLERANCE_PX = 4

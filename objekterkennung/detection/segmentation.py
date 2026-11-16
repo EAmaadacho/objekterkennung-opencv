@@ -2,7 +2,7 @@
 
 Colour: HSV and cv2.inRange (script ch. 2.2, 7.2), cleaned by opening and closing (ch. 5.2).
 Touching objects: Canny edges (ch. 4.1, 4.2), then watershed, or the distance transform if the
-edges show no border. Both go beyond the script; the README says why.
+edges show no border.
 """
 
 import cv2
@@ -22,11 +22,9 @@ SEED_RATIO = 0.8
 EDGE_LOW = 30
 EDGE_HIGH = 90
 # Two blocks of the same colour lying flush often show only a faint seam that these
-# thresholds miss. A second, finer edge search finds it. It is only used for large areas,
-# because inside a small block it finds wood grain as well: 16000 px lie above a cube top
-# (32 x 32 mm = 11 400 px) and just above a cuboid top (58 x 24 mm = 15 500 px). A cuboid
-# with a visible side face can be larger; its result is used only if the finer search finds
-# more wide, bright top faces than the normal one, which wood grain did not do in the recordings.
+# thresholds miss. A second, finer edge search finds it. It is only used for areas larger
+# than one cube or cuboid top (16000 px), because inside a single block it finds wood grain
+# as well. Its result is used only if it finds more wide, bright top faces than the normal one.
 FINE_EDGE_LOW = 10
 FINE_EDGE_HIGH = 30
 FINE_EDGE_AREA_MIN_PX = 16000
@@ -42,27 +40,21 @@ SIDE_FACE_BRIGHTNESS_MAX = 0.8
 HIDDEN_KERNEL = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * CUT_MARGIN_PX + 3, 2 * CUT_MARGIN_PX + 3))
 # The ball is higher than the blocks, so the camera sees it a little from the side and it can
 # hide a strip of a block next to it: at most about 46 mm x 127 mm / 480 mm = 12 mm at the corner
-# of the field (ball height x distance from the field centre / camera height). In the recordings
-# the hidden strips of the green cuboid were up to 26 px (8 mm) wide; wider gaps under a ball
-# were the open half of a prism's rectangle.
+# of the field (ball height x distance from the field centre / camera height).
 HIDDEN_STRIP_MAX_PX = 30
 # Two pieces next to a ball are one cuboid if the ball covers at least 18 % of the rectangle
-# around them and they fill 90 % of the rest. In the recordings the ball covered 21-25 % of a
-# green cuboid cut in two, but only up to 15 % of two red cubes lying beside the red sphere.
+# around them and they fill 90 % of the rest. Two cubes lying beside the ball are covered less.
 JOIN_COVER_MIN = 0.18
 JOIN_FILL_MIN = 0.9
 # Wood grain on some blocks gives Canny many short lines, so a top face shows no smooth
-# part to start from. In a row of three flush blocks of one colour (test 15.11., two blue
-# cubes and the blue prism) only the left cube kept a seed, and the whole row became one
-# "cuboid". For an area longer than any single block (a cuboid is 58 mm = 193 px) the edges
-# are searched once more without lines shorter than GRAIN_EDGE_MIN_PX; seams and outlines
-# run across a whole block and stay. In all recordings this split 4 such rows and changed
-# nothing else (20 px split only one, 50 px the same 4).
+# part to start from, and a row of flush blocks of one colour would stay one area. For an
+# area longer than any single block (a cuboid is 58 mm = 193 px) the edges are searched once
+# more without lines shorter than GRAIN_EDGE_MIN_PX; seams and outlines run across a whole
+# block and stay.
 ROW_LENGTH_MIN_PX = 230
 GRAIN_EDGE_MIN_PX = 35
 # What the background takes inside an area counts as a block only if it is at least this wide.
 # A visible side face is a thin strip; the smallest block, a prism, is about 70 px wide.
-# In the recordings 55 px kept every side face out (40 px let 9 more through).
 LOST_MIN_WIDTH_PX = 55
 
 
@@ -158,7 +150,7 @@ def _join_halves(pieces, hidden):
     """Joins two pieces next to the ball that are really one cuboid partly under it.
 
     If the ball lies on a cuboid or throws its shadow across it, the edge search can cut
-    the cuboid into two pieces that each look like a cube (test 15.11.). Two pieces are
+    the cuboid into two pieces that each look like a cube. Two pieces are
     joined if both touch the ball, together they are long like a cuboid, the ball covers at
     least JOIN_COVER_MIN of the rectangle around them (cv2.minAreaRect), and they fill at
     least JOIN_FILL_MIN of the part of that rectangle the ball leaves visible.
@@ -182,7 +174,8 @@ def _is_cuboid_under_ball(first, second, joined, hidden):
     if max(width, height) < CUBOID_ASPECT_MIN * min(width, height):
         return False
     rectangle = np.zeros_like(joined)
-    cv2.fillPoly(rectangle, [np.round(cv2.boxPoints(rectangle_box)).astype(np.int32)], 255)
+    corners = np.round(cv2.boxPoints(rectangle_box)).astype(np.int32)
+    cv2.drawContours(rectangle, [corners], -1, 255, thickness=cv2.FILLED)
     if np.count_nonzero(rectangle & hidden) < JOIN_COVER_MIN * np.count_nonzero(rectangle):
         return False
     visible = rectangle & ~hidden
@@ -208,7 +201,7 @@ def _add_hidden_part(piece, hidden):
         return piece
     corners = cv2.boxPoints(rectangle_box)
     rectangle = np.zeros_like(piece)
-    cv2.fillPoly(rectangle, [np.round(corners).astype(np.int32)], 255)
+    cv2.drawContours(rectangle, [np.round(corners).astype(np.int32)], -1, 255, thickness=cv2.FILLED)
     added = rectangle & hidden & ~piece
     # The distance transform gives half the width of the added part at its widest place.
     if 2 * cv2.distanceTransform(added, cv2.DIST_L2, 5).max() > HIDDEN_STRIP_MAX_PX:
